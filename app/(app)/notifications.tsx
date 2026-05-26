@@ -1,0 +1,19 @@
+/**
+ * Imari Notifications Screen — skeleton (full implementation in Session 10)
+ */
+
+import { Screen } from '../../src/components/layout/Screen'
+import { Text } from '../../src/components/ui/Text'
+import { useTheme } from '../../src/hooks/useTheme'
+
+export default function NotificationsScreen() {
+  const { COLORS, spacing } = useTheme()
+  return (
+    <Screen scrollable style={{ paddingHorizontal: spacing[6], paddingTop: spacing[4] }}>
+      <Text variant="h1" color={COLORS.text.primary}>Notifications</Text>
+      <Text variant="body" color={COLORS.text.secondary} style={{ marginTop: spacing[2] }}>
+        Notification center — coming in Session 10
+      </Text>
+    </Screen>
+  )
+}

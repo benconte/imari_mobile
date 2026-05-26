@@ -41,3 +41,11 @@ app-example
 # generated native folders
 /ios
 /android
+
+.claude/
+.agents/
+
+.env
+.env.*
+!.env.example
+!.env.sample

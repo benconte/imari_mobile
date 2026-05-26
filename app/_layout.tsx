@@ -1,24 +1,34 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import 'react-native-gesture-handler'
+import React from 'react'
+import { Stack } from 'expo-router'
+import { StatusBar } from 'expo-status-bar'
+import { Providers } from '../src/providers'
+import { useAppReady } from '../src/hooks/useAppReady'
+import { useTheme } from '../src/hooks/useTheme'
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
-
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+function AppContent() {
+  const { isDark } = useTheme()
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="auth" />
+        <Stack.Screen name="(app)" />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
-  );
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+    </>
+  )
+}
+
+export default function RootLayout() {
+  const isReady = useAppReady()
+
+  if (!isReady) return null
+
+  return (
+    <Providers>
+      <AppContent />
+    </Providers>
+  )
 }
