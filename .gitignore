@@ -49,3 +49,5 @@ app-example
 .env.*
 !.env.example
 !.env.sample
+
+.vscode/
