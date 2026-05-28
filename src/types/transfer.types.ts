@@ -12,6 +12,7 @@ export interface TransferPayload {
   description?: string
   pin: string                   // 4-digit PIN
   idempotencyKey?: string       // UUID, optional
+  recipientFingerprint?: string // from lookup, optional extra validation
 }
 
 // ─── Response from POST /wallet/transfer ──────────────────────────────────────
@@ -27,17 +28,35 @@ export interface TransferResult {
   processedAt: string | null
 }
 
-// ─── Mock-only: resolved recipient name (no backend endpoint yet) ─────────────
+// ─── Resolved recipient from GET /wallet/transfer/lookup?walletNumber=... ────
 
 export interface ResolvedRecipient {
+  walletId: string
   walletNumber: string
-  name: string           // display name — mock for now
   currency: string
+  displayName: string | null    // real user display name
+  maskedEmail: string | null    // e.g. "j***e@gmail.com"
+  maskedPhone: string | null    // e.g. "07*****00"
+  fingerprint: string           // sha256 of walletId:userId:walletNumber
+  // convenience alias for backward compat with UI
+  name: string                  // same as displayName ?? walletNumber
 }
 
-// ─── Recent contact derived from transaction history ──────────────────────────
+// ─── Beneficiary from GET /beneficiaries/recent ───────────────────────────────
+
+export interface Beneficiary {
+  id: string
+  displayName: string
+  imariWalletNumber: string    // format: IMR-XXXXXXXXXX
+  phone: string | null
+  lastUsedAt: string
+  isFavorite: boolean
+}
+
+// ─── Recent contact derived from beneficiaries or transaction history ─────────
 
 export interface RecentContact {
   walletNumber: string  // receiverWalletNumber from P2P_TRANSFER DEBIT txns
-  initials: string      // first 2 chars of wallet number as avatar fallback
+  initials: string      // first 2 chars of name / wallet number as avatar fallback
+  displayName?: string  // from beneficiary
 }
