@@ -1,0 +1,157 @@
+import { Budget, BudgetForecast } from '../types/budget.types'
+
+export const mockBudget: Budget = {
+  id: 'b-123',
+  name: 'December Budget',
+  period: 'MONTHLY',
+  startDate: '2024-12-01T00:00:00.000Z',
+  endDate: '2024-12-31T23:59:59.999Z',
+  status: 'ACTIVE',
+  totalLimit: 500000,
+  totalSpent: 325000,
+  currency: 'RWF',
+  createdAt: '2024-12-01T00:00:00.000Z',
+  updatedAt: '2024-12-15T10:00:00.000Z',
+  categories: [
+    {
+      id: 'cb-1',
+      category: 'FOOD_AND_DINING',
+      limit: 150000,
+      spent: 140000,
+      alertAt: 0.8,
+    },
+    {
+      id: 'cb-2',
+      category: 'TRANSPORT',
+      limit: 100000,
+      spent: 85000,
+      alertAt: 0.8,
+    },
+    {
+      id: 'cb-3',
+      category: 'ENTERTAINMENT',
+      limit: 50000,
+      spent: 20000,
+      alertAt: 0.8,
+    },
+    {
+      id: 'cb-4',
+      category: 'SHOPPING',
+      limit: 200000,
+      spent: 80000,
+      alertAt: 0.8,
+    },
+  ],
+}
+
+export const mockForecast: BudgetForecast = {
+  projectedSpend: 520000,
+  projectedOverspend: 20000,
+  daysRemaining: 16,
+  dailyBudgetLeft: 10937.5,
+  categoryForecasts: [
+    {
+      category: 'FOOD_AND_DINING',
+      projectedSpend: 180000,
+      limit: 150000,
+      willExceed: true,
+      daysUntilExceed: 2,
+    },
+    {
+      category: 'TRANSPORT',
+      projectedSpend: 110000,
+      limit: 100000,
+      willExceed: true,
+      daysUntilExceed: 5,
+    },
+    {
+      category: 'ENTERTAINMENT',
+      projectedSpend: 40000,
+      limit: 50000,
+      willExceed: false,
+      daysUntilExceed: null,
+    },
+    {
+      category: 'SHOPPING',
+      projectedSpend: 150000,
+      limit: 200000,
+      willExceed: false,
+      daysUntilExceed: null,
+    },
+  ],
+}
+
+export const mockPastBudgets: Budget[] = [
+  {
+    id: 'b-122',
+    name: 'November Budget',
+    period: 'MONTHLY',
+    startDate: '2024-11-01T00:00:00.000Z',
+    endDate: '2024-11-30T23:59:59.999Z',
+    status: 'COMPLETED',
+    totalLimit: 500000,
+    totalSpent: 480000,
+    currency: 'RWF',
+    createdAt: '2024-11-01T00:00:00.000Z',
+    updatedAt: '2024-11-30T23:59:59.999Z',
+    categories: [
+      {
+        id: 'cb-1',
+        category: 'FOOD_AND_DINING',
+        limit: 150000,
+        spent: 145000,
+        alertAt: 0.8,
+      },
+      {
+        id: 'cb-2',
+        category: 'TRANSPORT',
+        limit: 100000,
+        spent: 98000,
+        alertAt: 0.8,
+      },
+      {
+        id: 'cb-4',
+        category: 'SHOPPING',
+        limit: 250000,
+        spent: 237000,
+        alertAt: 0.8,
+      },
+    ],
+  },
+  {
+    id: 'b-121',
+    name: 'October Budget',
+    period: 'MONTHLY',
+    startDate: '2024-10-01T00:00:00.000Z',
+    endDate: '2024-10-31T23:59:59.999Z',
+    status: 'EXCEEDED',
+    totalLimit: 450000,
+    totalSpent: 480000,
+    currency: 'RWF',
+    createdAt: '2024-10-01T00:00:00.000Z',
+    updatedAt: '2024-10-31T23:59:59.999Z',
+    categories: [
+      {
+        id: 'cb-1',
+        category: 'FOOD_AND_DINING',
+        limit: 150000,
+        spent: 170000,
+        alertAt: 0.8,
+      },
+      {
+        id: 'cb-2',
+        category: 'TRANSPORT',
+        limit: 100000,
+        spent: 90000,
+        alertAt: 0.8,
+      },
+      {
+        id: 'cb-4',
+        category: 'SHOPPING',
+        limit: 200000,
+        spent: 220000,
+        alertAt: 0.8,
+      },
+    ],
+  },
+]
