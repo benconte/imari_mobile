@@ -2,9 +2,9 @@
  * Imari Analytics Screen — skeleton (full implementation in Session 9)
  */
 
-import { Screen } from '../../../src/components/layout/Screen'
-import { Text } from '../../../src/components/ui/Text'
-import { useTheme } from '../../../src/hooks/useTheme'
+import { Screen } from '../../src/components/layout/Screen'
+import { Text } from '../../src/components/ui/Text'
+import { useTheme } from '../../src/hooks/useTheme'
 
 export default function AnalyticsScreen() {
   const { COLORS, spacing } = useTheme()

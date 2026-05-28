@@ -23,8 +23,7 @@ import { useAuth } from '../../../src/hooks/useAuth'
 import { useTheme } from '../../../src/hooks/useTheme'
 import { spacing } from '../../../src/theme/spacing'
 
-// ─── HomeHeader ──────────────────────────────────────────────────────────────
-function HomeHeader({ onNotificationPress }: { onNotificationPress: () => void }) {
+function HomeHeader() {
   const { COLORS } = useTheme()
   const { user } = useAuth()
   const hour = new Date().getHours()
@@ -35,13 +34,6 @@ function HomeHeader({ onNotificationPress }: { onNotificationPress: () => void }
       <Text variant="h2" style={{ color: COLORS.text.primary }}>
         {greeting}, {user?.firstName ?? 'there'} 👋
       </Text>
-      <TouchableOpacity onPress={onNotificationPress} accessibilityLabel="Notifications"
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-        <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-          <Path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"
-            stroke={COLORS.text.secondary} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-        </Svg>
-      </TouchableOpacity>
     </View>
   )
 }
@@ -85,7 +77,7 @@ export default function HomeScreen() {
           { paddingBottom: insets.bottom + 120 }
         ]}
       >
-        <HomeHeader onNotificationPress={() => router.push('/(app)/notifications' as never)} />
+        <HomeHeader />
 
         <BalanceCard
           balance={wallet?.balance ?? 0}

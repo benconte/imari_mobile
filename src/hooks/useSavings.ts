@@ -55,7 +55,7 @@ function normalizeVault(v: Record<string, unknown>): SavingsVault {
 async function apiFetchVaults(): Promise<SavingsVault[]> {
   const res = await api.get<ApiResponse<SavingsVault[]>>('/savings/vaults')
   const raw = res.data.data ?? []
-  return raw.map(normalizeVault)
+  return raw.map((v: any) => normalizeVault(v))
 }
 
 async function apiFetchVault(id: string): Promise<SavingsVault> {

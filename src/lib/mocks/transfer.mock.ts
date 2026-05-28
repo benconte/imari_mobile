@@ -5,17 +5,17 @@
 import type { ResolvedRecipient, TransferResult } from '../../types/transfer.types'
 
 export const mockResolvedRecipient: ResolvedRecipient = {
-  walletNumber: 'IMR-7465291357',
-  name: 'Jean Pierre Habimana',
+  walletNumber: '1234567890',
+  name: 'John Doe',
   currency: 'RWF',
-}
+} as any
 
 export function mockResolveByWalletNumber(walletNumber: string): ResolvedRecipient {
   return {
-    walletNumber,
-    name: 'Unknown Recipient',
+    walletNumber: walletNumber,
+    name: 'Jane Smith',
     currency: 'RWF',
-  }
+  } as any
 }
 
 export const mockTransferResult: TransferResult = {
