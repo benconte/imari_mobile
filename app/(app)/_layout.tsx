@@ -68,7 +68,7 @@ export default function AppLayout() {
         }}
       >
         <Drawer.Screen name="(tabs)" options={{ title: 'Home' }} />
-        <Drawer.Screen name="wallet" options={{ title: 'My Wallets' }} />
+        <Drawer.Screen name="analytics" options={{ title: 'Analytics' }} />
         <Drawer.Screen name="budget" options={{ title: 'Budget' }} />
         <Drawer.Screen name="subscriptions" options={{ title: 'Subscriptions' }} />
         <Drawer.Screen name="notifications" options={{ title: 'Notifications' }} />

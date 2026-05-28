@@ -41,7 +41,7 @@ function DotsIcon({ color }: { color: string }) {
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
-export default function WalletIndexScreenss() {
+export default function WalletIndexScreen() {
   const router = useRouter()
   const { COLORS } = useTheme()
   const {
@@ -116,21 +116,7 @@ export default function WalletIndexScreenss() {
     >
       {/* ── Header ── */}
       <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityLabel="Go back"
-        >
-          <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M19 12H5M12 19l-7-7 7-7"
-              stroke={COLORS.accent.primary}
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </Svg>
-        </Pressable>
+
 
         <Text variant="h2" style={{ color: COLORS.text.primary, flex: 1 }}>
           My Wallets

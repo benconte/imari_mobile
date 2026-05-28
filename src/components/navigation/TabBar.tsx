@@ -18,6 +18,7 @@ import { Platform } from 'react-native'
 import Svg, { Path, Circle, Rect } from 'react-native-svg'
 import { useTheme } from '../../hooks/useTheme'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
+import { Ionicons } from '@expo/vector-icons'
 
 const TAB_HEIGHT = 64
 const TAB_MARGIN_BOTTOM = 20
@@ -25,7 +26,7 @@ const TAB_MARGIN_HORIZONTAL = 16
 const INDICATOR_SIZE = 40
 
 // Inline SVG icon paths for the 5 tabs
-type IconName = 'home' | 'transactions' | 'savings' | 'cards' | 'analytics'
+type IconName = 'home' | 'transactions' | 'savings' | 'cards' | 'wallet'
 
 function TabIcon({ name, color, size = 22 }: { name: IconName; color: string; size?: number }) {
   switch (name) {
@@ -59,20 +60,12 @@ function TabIcon({ name, color, size = 22 }: { name: IconName; color: string; si
           <Rect x={5} y={14} width={4} height={2} rx={0.5} fill={color} />
         </Svg>
       )
-    case 'analytics':
-      return (
-        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-          <Path d="M4 20V12" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-          <Path d="M8 20V8" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-          <Path d="M12 20V14" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-          <Path d="M16 20V6" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-          <Path d="M20 20V10" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-        </Svg>
-      )
+    case 'wallet':
+      return <Ionicons name="wallet-outline" size={size} color={color} />
   }
 }
 
-const TAB_ICON_NAMES: IconName[] = ['home', 'transactions', 'savings', 'cards', 'analytics']
+const TAB_ICON_NAMES: IconName[] = ['home', 'transactions', 'savings', 'cards', 'wallet']
 
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { COLORS, radius } = useTheme()

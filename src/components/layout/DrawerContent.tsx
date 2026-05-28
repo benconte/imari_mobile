@@ -25,7 +25,7 @@ type DrawerRoute = {
 }
 
 const DRAWER_ITEMS: DrawerRoute[] = [
-  { label: 'My Wallets', icon: '◈', route: '/(app)/wallet' },
+  { label: 'Analytics', icon: '◈', route: '/(app)/analytics' },
   { label: 'Budget', icon: '◎', route: '/(app)/budget' },
   { label: 'Subscriptions', icon: '⟳', route: '/(app)/subscriptions' },
   { label: 'Notifications', icon: '◐', route: '/(app)/notifications' },
