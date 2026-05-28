@@ -20,6 +20,8 @@ interface WalletSelectorProps {
   onSelect: (walletId: string) => void
   onClose: () => void
   visible: boolean
+  onManage?: () => void
+  onAddWallet?: () => void
 }
 
 export function WalletSelector({
@@ -28,10 +30,12 @@ export function WalletSelector({
   onSelect,
   onClose,
   visible,
+  onManage,
+  onAddWallet,
 }: WalletSelectorProps) {
   const { COLORS } = useTheme()
 
-  const sheetHeight = Math.min(120 + wallets.length * 64 + 64, 400)
+  const sheetHeight = Math.min(120 + wallets.length * 64 + 100, 480)
 
   function handleSelect(id: string) {
     onSelect(id)
@@ -94,7 +98,12 @@ export function WalletSelector({
         })}
 
         {/* Add wallet */}
-        <TouchableOpacity style={styles.addRow} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.addRow}
+          activeOpacity={0.7}
+          onPress={() => { onClose(); onAddWallet?.() }}
+          accessibilityLabel="Add wallet"
+        >
           <View style={[styles.addIcon, { backgroundColor: COLORS.background.tertiary }]}>
             <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
               <Path
@@ -107,6 +116,18 @@ export function WalletSelector({
           </View>
           <Text variant="body" style={{ color: COLORS.accent.primary }}>
             Add wallet
+          </Text>
+        </TouchableOpacity>
+
+        {/* Manage all wallets link */}
+        <TouchableOpacity
+          style={[styles.manageLink, { borderTopColor: COLORS.border.subtle }]}
+          activeOpacity={0.7}
+          onPress={() => { onClose(); onManage?.() }}
+          accessibilityLabel="Manage all wallets"
+        >
+          <Text variant="caption" style={{ color: COLORS.text.secondary }}>
+            Manage all wallets →
           </Text>
         </TouchableOpacity>
       </View>
@@ -158,5 +179,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  manageLink: {
+    alignItems: 'center',
+    paddingVertical: spacing[3],
+    marginTop: spacing[1],
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
 })

@@ -3,16 +3,20 @@
  * Always dark gradient regardless of color scheme.
  * Balance show/hide with Reanimated opacity fade.
  * Slides up on mount with withSpring.
+ *
+ * PIN status is user-scoped — read from AuthContext.isPinSet, not per-wallet.
  */
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { StyleSheet, TouchableOpacity, View } from 'react-native'
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
 import Svg, { Path } from 'react-native-svg'
 import { Text } from '../ui/Text'
 import { Skeleton } from '../ui/Skeleton'
-import { formatCurrency, maskBalance, truncateWalletNumber } from '../../lib/utils/currency'
+import { PinUnlockSheet } from './PinUnlockSheet'
+import { useAuth } from '../../hooks/useAuth'
+import { formatCurrency, maskBalance } from '../../lib/utils/currency'
 import { radius } from '../../theme/radius'
 import { spacing } from '../../theme/spacing'
 
@@ -21,9 +25,13 @@ interface BalanceCardProps {
   currency: string
   walletNumber: string
   isLoading: boolean
-  onToggleVisibility: () => void
+  onHideBalance: () => void
+  onRequestShowBalance: () => boolean
+  onUnlockBalance: () => void
   isVisible: boolean
-  onWalletPress: () => void
+  onWalletPress: () => void    // → navigate to wallet management screen
+  onSwitchWallet?: () => void  // → open wallet selector sheet
+  walletCount?: number         // show switch icon only if > 1
 }
 
 const CARD_GRADIENT = ['#0F1729', '#1A2540', '#0F1729'] as const
@@ -40,16 +48,29 @@ function EyeIcon({ visible }: { visible: boolean }) {
   )
 }
 
-function ChevronIcon() {
+function SwitchIcon() {
   return (
-    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-      <Path d="M9 18l6-6-6-6" stroke="rgba(255,255,255,0.5)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" stroke="rgba(255,255,255,0.7)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   )
 }
 
-// ─── BalanceCard ──────────────────────────────────────────────────────────────
-export function BalanceCard({ balance, currency, walletNumber, isLoading, onToggleVisibility, isVisible, onWalletPress }: BalanceCardProps) {
+export function BalanceCard({
+  balance,
+  currency,
+  walletNumber,
+  isLoading,
+  onHideBalance,
+  onRequestShowBalance,
+  onUnlockBalance,
+  isVisible,
+  onWalletPress,
+  onSwitchWallet,
+  walletCount = 1,
+}: BalanceCardProps) {
+  const { isPinSet } = useAuth()
+  const [pinSheetVisible, setPinSheetVisible] = useState(false)
   const translateY = useSharedValue(20)
   const mountOpacity = useSharedValue(0)
   const balanceOpacity = useSharedValue(1)
@@ -68,15 +89,41 @@ export function BalanceCard({ balance, currency, walletNumber, isLoading, onTogg
   const containerStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }], opacity: mountOpacity.value }))
   const balanceStyle = useAnimatedStyle(() => ({ opacity: balanceOpacity.value }))
 
+  function handleEyePress() {
+    if (isVisible) {
+      onHideBalance()
+    } else {
+      // If no PIN set: show balance directly
+      if (!isPinSet) {
+        onUnlockBalance()
+        return
+      }
+      // PIN is set: check if within recent-unlock window first
+      const success = onRequestShowBalance()
+      if (!success) {
+        // Need to enter PIN
+        setPinSheetVisible(true)
+      }
+    }
+  }
+
   return (
+    <>
     <Animated.View style={[styles.container, containerStyle]}>
       <LinearGradient colors={CARD_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.gradient}>
         <View style={styles.glow} />
         <View style={styles.topRow}>
           <Text variant="label" style={styles.labelText}>Total Balance</Text>
-          <TouchableOpacity onPress={onToggleVisibility} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <EyeIcon visible={isVisible} />
-          </TouchableOpacity>
+          <View style={styles.topActions}>
+            {onSwitchWallet && walletCount > 1 && (
+              <TouchableOpacity onPress={onSwitchWallet} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.switchBtn} accessibilityLabel="Switch wallet">
+                <SwitchIcon />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={handleEyePress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <EyeIcon visible={isVisible} />
+            </TouchableOpacity>
+          </View>
         </View>
         {isLoading ? (
           <Skeleton width="70%" height={56} radius={8} style={styles.balanceSkeleton} />
@@ -90,14 +137,23 @@ export function BalanceCard({ balance, currency, walletNumber, isLoading, onTogg
         <View style={styles.currencyPill}>
           <Text variant="caption" style={styles.currencyText}>{currency}</Text>
         </View>
-        <TouchableOpacity style={styles.bottomRow} onPress={onWalletPress} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.bottomRow} onPress={onWalletPress} activeOpacity={0.7} accessibilityLabel="Manage wallet">
           {isLoading ? <Skeleton width={120} height={16} radius={4} /> : (
-            <Text variant="bodySmall" style={styles.walletNumberText}>{truncateWalletNumber(walletNumber)}</Text>
+            <Text variant="bodySmall" style={styles.walletNumberText}>{walletNumber}</Text>
           )}
-          <ChevronIcon />
+          <Text style={styles.manageText}>Manage →</Text>
         </TouchableOpacity>
       </LinearGradient>
     </Animated.View>
+    <PinUnlockSheet
+      visible={pinSheetVisible}
+      onClose={() => setPinSheetVisible(false)}
+      onSuccess={() => {
+        setPinSheetVisible(false)
+        onUnlockBalance()
+      }}
+    />
+    </>
   )
 }
 
@@ -106,6 +162,8 @@ const styles = StyleSheet.create({
   gradient: { padding: spacing[5], gap: spacing[2], minHeight: 180 },
   glow: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 80, backgroundColor: 'rgba(79, 142, 247, 0.12)' },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  topActions: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
+  switchBtn: {},
   labelText: { color: 'rgba(255,255,255,0.6)' },
   balanceSkeleton: { marginVertical: spacing[1] },
   balanceText: { color: '#FFFFFF', fontSize: 42, lineHeight: 52 },
@@ -113,4 +171,5 @@ const styles = StyleSheet.create({
   currencyText: { color: 'rgba(255,255,255,0.8)', fontSize: 11 },
   bottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing[2] },
   walletNumberText: { color: 'rgba(255,255,255,0.6)' },
+  manageText: { color: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'DMSans_500Medium' },
 })

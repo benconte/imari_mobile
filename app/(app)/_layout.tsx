@@ -68,11 +68,15 @@ export default function AppLayout() {
         }}
       >
         <Drawer.Screen name="(tabs)" options={{ title: 'Home' }} />
+        <Drawer.Screen name="wallet" options={{ title: 'My Wallets' }} />
         <Drawer.Screen name="budget" options={{ title: 'Budget' }} />
         <Drawer.Screen name="subscriptions" options={{ title: 'Subscriptions' }} />
         <Drawer.Screen name="notifications" options={{ title: 'Notifications' }} />
         <Drawer.Screen name="profile" options={{ title: 'Profile' }} />
         <Drawer.Screen name="edit-profile" options={{ title: 'Edit Profile' }} />
+        <Drawer.Screen name="transfer" options={{ title: 'Transfer', swipeEnabled: false }} />
+        <Drawer.Screen name="transaction" options={{ title: 'Transaction' }} />
+        <Drawer.Screen name="qr" options={{ title: 'QR', swipeEnabled: false }} />
         <Drawer.Screen name="kyc" options={{ title: 'Verify Identity', swipeEnabled: false }} />
         <Drawer.Screen name="kyc-pending" options={{ title: 'KYC Pending', swipeEnabled: false }} />
       </Drawer>
