@@ -30,6 +30,8 @@ export function formatTransactionAmount(
   currency: string,
   direction: TransactionDirection,
 ): string {
+  console.log(amount);
+
   const sign = direction === 'CREDIT' ? '+' : '-'
   return `${sign}${formatCurrency(amount, currency)}`
 }

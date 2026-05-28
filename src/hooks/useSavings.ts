@@ -3,13 +3,18 @@
  * useVault — vault detail, contribution history, contribute/withdraw/close mutations.
  *
  * Backend endpoints (not yet implemented — falls back to mock):
+ * Backend endpoints:
  *   GET  /savings/vaults
  *   GET  /savings/vaults/:id
- *   GET  /savings/vaults/:id/contributions
+ *   GET  /savings/rules?walletId=...
  *   POST /savings/vaults
- *   POST /savings/vaults/:id/contribute
+ *   POST /savings/vaults/:id/deposit     ← contribute
  *   POST /savings/vaults/:id/withdraw
- *   POST /savings/vaults/:id/close
+ *   DELETE /savings/vaults/:id           ← close vault
+ *   PATCH /savings/rules/:id/toggle
+ *
+ * NOTE: No per-vault contributions endpoint — contributions are sourced
+ * from transaction history (VAULT_CONTRIBUTION type) or mock.
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -27,27 +32,46 @@ import {
   mockRules,
 } from '../lib/mocks/savings.mock'
 
-// Savings backend not yet implemented — always use mock for now
-const USE_MOCK = true
+// Env-driven flag: set EXPO_PUBLIC_USE_MOCK=true to use mock data
+const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK === 'true'
+
+// ─── API response shape ───────────────────────────────────────────────────────
+
+interface ApiResponse<T> {
+  data: T
+}
+
+// Backend returns Decimal fields as strings — normalize to numbers
+function normalizeVault(v: Record<string, unknown>): SavingsVault {
+  return {
+    ...(v as unknown as SavingsVault),
+    targetAmount: Number(v.targetAmount),
+    currentAmount: Number(v.currentAmount),
+  }
+}
 
 // ─── API helpers ─────────────────────────────────────────────────────────────
 
 async function apiFetchVaults(): Promise<SavingsVault[]> {
-  const res = await api.get<{ data: SavingsVault[] }>('/savings/vaults')
-  return res.data.data
+  const res = await api.get<ApiResponse<SavingsVault[]>>('/savings/vaults')
+  const raw = res.data.data ?? []
+  return raw.map(normalizeVault)
 }
 
 async function apiFetchVault(id: string): Promise<SavingsVault> {
-  const res = await api.get<{ data: SavingsVault }>(`/savings/vaults/${id}`)
-  return res.data.data
+  const res = await api.get<ApiResponse<SavingsVault>>(`/savings/vaults/${id}`)
+  return normalizeVault(res.data.data as unknown as Record<string, unknown>)
 }
 
-async function apiFetchContributions(id: string): Promise<VaultContribution[]> {
-  const res = await api.get<{ data: VaultContribution[] }>(
-    `/savings/vaults/${id}/contributions`,
-    { params: { page: 1, limit: 20 } },
-  )
-  return res.data.data
+async function apiFetchRules(walletId: string): Promise<SavingsRule[]> {
+  const res = await api.get<ApiResponse<SavingsRule[]>>('/savings/rules', {
+    params: { walletId },
+  })
+  const raw = res.data.data ?? []
+  return raw.map((r) => ({
+    ...r,
+    amount: r.amount !== null ? Number(r.amount) : null,
+  }))
 }
 
 // ─── useSavings ───────────────────────────────────────────────────────────────
@@ -87,8 +111,20 @@ export function useSavings() {
         }
         return newVault
       }
-      const res = await api.post<{ data: SavingsVault }>('/savings/vaults', payload)
-      return res.data.data
+      // Backend expects targetAmount as string
+      const body = {
+        walletId: payload.walletId,
+        name: payload.name,
+        description: payload.description,
+        targetAmount: String(payload.targetAmount),
+        currency: payload.currency,
+        targetDate: payload.targetDate
+          ? new Date(payload.targetDate).toISOString()
+          : undefined,
+        iconEmoji: payload.iconEmoji,
+      }
+      const res = await api.post<ApiResponse<SavingsVault>>('/savings/vaults', body)
+      return normalizeVault(res.data.data as unknown as Record<string, unknown>)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['savings'] })
@@ -120,19 +156,26 @@ export function useVault(id: string) {
     staleTime: 30_000,
   })
 
+  // Contributions: no dedicated endpoint — use mock or fetch from tx history
   const { data: contributions = [], isLoading: isLoadingContributions } = useQuery<VaultContribution[], Error>({
     queryKey: ['vault', id, 'contributions'],
-    queryFn: USE_MOCK
-      ? () => Promise.resolve(mockContributions.filter((c) => c.vaultId === id))
-      : () => apiFetchContributions(id),
+    queryFn: () => Promise.resolve(
+      USE_MOCK
+        ? mockContributions.filter((c) => c.vaultId === id)
+        : [] // No backend contributions endpoint — show empty until implemented
+    ),
     enabled: Boolean(id),
     staleTime: 30_000,
   })
 
+  // Rules: fetch from GET /savings/rules?walletId=... once vault is loaded
+  const walletId = vault?.walletId
   const { data: rules = [] } = useQuery<SavingsRule[], Error>({
     queryKey: ['vault', id, 'rules'],
-    queryFn: () => Promise.resolve(mockRules),  // Rules endpoint TBD
-    enabled: Boolean(id),
+    queryFn: USE_MOCK
+      ? () => Promise.resolve(mockRules)
+      : () => apiFetchRules(walletId!),
+    enabled: Boolean(id) && Boolean(walletId),
     staleTime: 60_000,
   })
 
@@ -142,6 +185,7 @@ export function useVault(id: string) {
     queryClient.invalidateQueries({ queryKey: ['wallet', 'dashboard'] })
   }
 
+  // Contribute — real endpoint is POST /savings/vaults/:id/deposit
   const contributeMutation = useMutation<VaultContribution, Error, ContributePayload>({
     mutationFn: async (payload) => {
       if (USE_MOCK) {
@@ -155,11 +199,19 @@ export function useVault(id: string) {
           createdAt: new Date().toISOString(),
         }
       }
-      const res = await api.post<{ data: VaultContribution }>(
-        `/savings/vaults/${id}/contribute`,
-        payload,
-      )
-      return res.data.data
+      // Backend expects amount as string, does not support note
+      await api.post(`/savings/vaults/${id}/deposit`, {
+        amount: String(payload.amount),
+      })
+      // Return a synthetic contribution record
+      return {
+        id: `con_${Date.now()}`,
+        vaultId: id,
+        amount: payload.amount,
+        note: payload.note ?? null,
+        isAuto: false,
+        createdAt: new Date().toISOString(),
+      }
     },
     onSuccess: invalidate,
   })
@@ -170,20 +222,35 @@ export function useVault(id: string) {
         await new Promise((r) => setTimeout(r, 800))
         return
       }
-      await api.post(`/savings/vaults/${id}/withdraw`, { amount })
+      await api.post(`/savings/vaults/${id}/withdraw`, { amount: String(amount) })
     },
     onSuccess: invalidate,
   })
 
+  // Close vault — real endpoint is DELETE /savings/vaults/:id
   const closeMutation = useMutation<void, Error, void>({
     mutationFn: async () => {
       if (USE_MOCK) {
         await new Promise((r) => setTimeout(r, 800))
         return
       }
-      await api.post(`/savings/vaults/${id}/close`)
+      await api.delete(`/savings/vaults/${id}`)
     },
     onSuccess: invalidate,
+  })
+
+  // Toggle rule — real endpoint is PATCH /savings/rules/:id/toggle
+  const toggleRuleMutation = useMutation<void, Error, string>({
+    mutationFn: async (ruleId) => {
+      if (USE_MOCK) {
+        await new Promise((r) => setTimeout(r, 300))
+        return
+      }
+      await api.patch(`/savings/rules/${ruleId}/toggle`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vault', id, 'rules'] })
+    },
   })
 
   return {

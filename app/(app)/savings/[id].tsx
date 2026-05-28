@@ -61,7 +61,7 @@ export default function VaultDetailScreen() {
   const router = useRouter()
   const { COLORS } = useTheme()
   const { wallet } = useWallet()
-  const { vault, contributions, rules, isLoading, contribute, isContributing, refetch, closeVault } = useVault(id ?? '')
+  const { vault, contributions, rules, isLoading, contribute, isContributing, refetch, closeVault, toggleRule } = useVault(id ?? '')
 
   const [sheetVisible, setSheetVisible] = useState(false)
   const [confettiVisible, setConfettiVisible] = useState(false)
@@ -194,7 +194,7 @@ export default function VaultDetailScreen() {
                 <View key={rule.id}>
                   <Switch
                     value={rule.isActive}
-                    onChange={() => {}}  // Rule toggle — backend endpoint TBD
+                    onChange={() => toggleRule(rule.id)}  // PATCH /savings/rules/:id/toggle
                     label={ruleDescriptions[rule.type] ?? rule.type}
                   />
                   {idx < rules.length - 1 && (

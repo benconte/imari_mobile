@@ -1,11 +1,14 @@
 /**
  * useTransfer — P2P transfer hook.
  *
- * initiate: calls POST /wallet/transfer (real backend endpoint)
- * resolveRecipient: mock only — backend resolve endpoint not yet available.
+ * initiate: calls POST /wallet/transfer
+ * resolveRecipient: calls GET /wallet/transfer/lookup?walletNumber=...
+ *   - Debounced 500ms to avoid API spam while typing
+ *   - Falls back to mock when EXPO_PUBLIC_USE_MOCK=true
  *
  * On success: invalidates ['wallet', 'dashboard'] and ['transactions'] so
  * the home screen balance and transaction list refresh automatically.
+ * Also auto-saves the recipient as a beneficiary.
  */
 
 import { useState, useCallback, useRef } from 'react'
@@ -14,7 +17,7 @@ import { api } from '../lib/api'
 import { mockResolveByWalletNumber, mockTransferResult } from '../lib/mocks/transfer.mock'
 import type { TransferPayload, TransferResult, ResolvedRecipient } from '../types/transfer.types'
 
-const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK !== 'false'
+const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK === 'true'
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 
@@ -24,6 +27,40 @@ async function apiTransfer(payload: TransferPayload): Promise<TransferResult> {
     payload,
   )
   return data.data
+}
+
+interface LookupResponse {
+  walletId: string
+  walletNumber: string
+  currency: string
+  displayName: string | null
+  maskedEmail: string | null
+  maskedPhone: string | null
+  fingerprint: string
+}
+
+async function apiLookupRecipient(walletNumber: string): Promise<ResolvedRecipient> {
+  const { data } = await api.get<{ data: LookupResponse }>(
+    '/wallet/transfer/lookup',
+    { params: { walletNumber } },
+  )
+  const raw = data.data
+  return {
+    ...raw,
+    // convenience alias for UI components
+    name: raw.displayName ?? raw.walletNumber,
+  }
+}
+
+async function apiSaveBeneficiary(recipient: ResolvedRecipient): Promise<void> {
+  try {
+    await api.post('/beneficiaries', {
+      displayName: recipient.name,
+      imariWalletNumber: recipient.walletNumber,
+    })
+  } catch {
+    // Non-critical — silently ignore if save fails
+  }
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -59,9 +96,14 @@ export function useTransfer(): UseTransferReturn {
     onSuccess: (data) => {
       setResult(data)
       setError(null)
-      // Invalidate so home balance + transaction list refresh
+      // Auto-save recipient as beneficiary (non-blocking)
+      if (resolvedRecipient && !USE_MOCK) {
+        apiSaveBeneficiary(resolvedRecipient)
+      }
+      // Invalidate so home balance + transaction list + beneficiaries refresh
       queryClient.invalidateQueries({ queryKey: ['wallet', 'dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['beneficiaries'] })
     },
     onError: (err) => {
       const message =
@@ -75,13 +117,18 @@ export function useTransfer(): UseTransferReturn {
   const initiate = useCallback(
     async (payload: TransferPayload): Promise<TransferResult> => {
       setError(null)
-      const res = await mutation.mutateAsync(payload)
+      // Pass fingerprint for extra validation if available
+      const enrichedPayload: TransferPayload = {
+        ...payload,
+        recipientFingerprint: resolvedRecipient?.fingerprint,
+      }
+      const res = await mutation.mutateAsync(enrichedPayload)
       return res
     },
-    [mutation],
+    [mutation, resolvedRecipient],
   )
 
-  // Mock resolve — debounced 500ms. Replaces with real API when endpoint exists.
+  // Debounced lookup — calls real GET /wallet/transfer/lookup or mock
   const resolveRecipient = useCallback((walletNumber: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
 
@@ -94,9 +141,16 @@ export function useTransfer(): UseTransferReturn {
     setIsResolving(true)
     debounceRef.current = setTimeout(async () => {
       try {
-        // TODO: replace with GET /wallet/resolve?walletNumber=... when backend adds it
-        await new Promise((r) => setTimeout(r, 300))
-        setResolvedRecipient(mockResolveByWalletNumber(walletNumber))
+        if (USE_MOCK) {
+          await new Promise((r) => setTimeout(r, 300))
+          setResolvedRecipient(mockResolveByWalletNumber(walletNumber))
+        } else {
+          const recipient = await apiLookupRecipient(walletNumber)
+          setResolvedRecipient(recipient)
+        }
+      } catch {
+        // Recipient not found or network error — clear resolved state
+        setResolvedRecipient(null)
       } finally {
         setIsResolving(false)
       }

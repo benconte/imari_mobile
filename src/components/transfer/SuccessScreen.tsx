@@ -104,6 +104,7 @@ export function SuccessScreen({ result, recipientName, onDone, onShareReceipt }:
             fontWeight: '700',
             color: COLORS.text.primary,
             textAlign: 'center',
+            paddingTop: 20,
           }}
         >
           {displayAmount}

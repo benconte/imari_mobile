@@ -106,6 +106,15 @@ export default function LoginScreen() {
     } catch (err: unknown) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
       const axiosMsg = err instanceof AxiosError ? err?.response?.data?.message : "Please check your credentials and try again.";
+      
+      if (typeof axiosMsg === 'string' && axiosMsg.includes('verify your email address')) {
+        router.push({
+          pathname: '/auth/verify-otp',
+          params: { target: email.trim().toLowerCase(), purpose: 'REGISTRATION' }
+        } as never)
+        return
+      }
+
       Alert.alert('Login Failed', axiosMsg)
     } finally {
       setLoading(false)

@@ -418,8 +418,7 @@ export default function CreateVaultScreen() {
         description: description.trim() || undefined,
         targetAmount: parseFloat(amount) || 0,
         currency: wallet.currency,
-        isLocked,
-        lockUntil: isLocked && lockUntil ? lockUntil : undefined,
+        isLocked: false,   // Note: backend create schema doesn't support isLocked yet
         targetDate: targetDate ?? undefined,
         iconEmoji: emoji,
       })
