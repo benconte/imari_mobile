@@ -130,7 +130,7 @@ export function WalletActions({ wallet, visible, onClose, onAction }: WalletActi
   }
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} title="Wallet Actions" snapPoints={[360]}>
+    <BottomSheet visible={visible} onClose={onClose} title="Wallet Actions" snapPoints={[390]}>
       <View style={styles.list}>
         {visibleActions.map((row) => (
           <Pressable

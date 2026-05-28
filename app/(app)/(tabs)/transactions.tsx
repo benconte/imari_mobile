@@ -7,6 +7,7 @@ import React, { useState } from 'react'
 import { RefreshControl, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native'
 import { router } from 'expo-router'
 import * as Haptics from 'expo-haptics'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Screen } from '../../../src/components/layout/Screen'
 import { Text } from '../../../src/components/ui/Text'
 import { Badge } from '../../../src/components/ui/Badge'
@@ -90,6 +91,7 @@ function TransactionsEmptyState({
 export default function TransactionsScreen() {
   const { COLORS } = useTheme()
   const { wallet } = useWallet()
+  const insets = useSafeAreaInsets()
   const primaryCurrency = wallet?.currency ?? 'RWF'
 
   const {
@@ -187,7 +189,7 @@ export default function TransactionsScreen() {
             />
           }
           stickySectionHeadersEnabled
-          contentContainerStyle={{ paddingBottom: spacing[16], flexGrow: 1 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 120, flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
         />
       )}
