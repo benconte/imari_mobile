@@ -9,6 +9,7 @@ import React, { useState } from 'react'
 import { StyleSheet, TouchableOpacity, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import Svg, { Path } from 'react-native-svg'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Screen } from '../../../src/components/layout/Screen'
 import { Text } from '../../../src/components/ui/Text'
 import { BalanceCard } from '../../../src/components/wallet/BalanceCard'
@@ -62,6 +63,7 @@ function HealthScoreSection({ score = 0, isLoading }: { score: number | null; is
 export default function HomeScreen() {
   const router = useRouter()
   const [walletSelectorVisible, setWalletSelectorVisible] = useState(false)
+  const insets = useSafeAreaInsets()
 
   const {
     wallet, allWallets, isLoadingWallet,
@@ -78,7 +80,10 @@ export default function HomeScreen() {
         refreshing={isLoadingWallet}
         onRefresh={refetch}
         edges={['top', 'left', 'right']}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + 120 }
+        ]}
       >
         <HomeHeader onNotificationPress={() => router.push('/(app)/notifications' as never)} />
 
@@ -137,7 +142,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: spacing[4],
     paddingTop: spacing[2],
-    paddingBottom: spacing[16],
     gap: spacing[4],
   },
   header: {
