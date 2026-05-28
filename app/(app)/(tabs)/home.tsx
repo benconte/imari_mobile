@@ -1,8 +1,8 @@
 /**
  * Home screen — Imari wallet dashboard.
  * Phase 9: full implementation replacing the Session 1 skeleton.
- * Inline components: HomeHeader (<30 lines), HealthScoreSection (<20 lines).
- * SavingsSnapshotWidget extracted to components/wallet/SavingsSnapshotWidget.tsx.
+ * Session 12 update: wallet management navigation, switch wallet icon,
+ * WalletSelector properly wired to navigate/manage.
  */
 
 import React, { useState } from 'react'
@@ -46,7 +46,7 @@ function HomeHeader({ onNotificationPress }: { onNotificationPress: () => void }
 }
 
 // ─── HealthScoreSection ──────────────────────────────────────────────────────
-function HealthScoreSection({ score, isLoading }: { score: number | null; isLoading: boolean }) {
+function HealthScoreSection({ score = 0, isLoading }: { score: number | null; isLoading: boolean }) {
   const { COLORS } = useTheme()
   return (
     <View style={styles.healthSection}>
@@ -67,7 +67,7 @@ export default function HomeScreen() {
     wallet, allWallets, isLoadingWallet,
     recentTransactions, isLoadingTransactions,
     financialHealthScore, totalSaved, activeVaultsCount,
-    isBalanceVisible, toggleBalanceVisibility,
+    isBalanceVisible, hideBalance, requestShowBalance, unlockBalance,
     selectedWalletId, selectWallet, refetch,
   } = useWallet()
 
@@ -85,17 +85,21 @@ export default function HomeScreen() {
         <BalanceCard
           balance={wallet?.balance ?? 0}
           currency={wallet?.currency ?? 'RWF'}
-          walletNumber={wallet?.walletNumber ?? '0000 0000 0000 0000'}
+          walletNumber={wallet?.walletNumber ?? ''}
           isLoading={isLoadingWallet}
           isVisible={isBalanceVisible}
-          onToggleVisibility={toggleBalanceVisibility}
-          onWalletPress={() => setWalletSelectorVisible(true)}
+          onHideBalance={hideBalance}
+          onRequestShowBalance={requestShowBalance}
+          onUnlockBalance={unlockBalance}
+          onWalletPress={() => router.push(`/(app)/wallet/${wallet?.id}` as never)}
+          onSwitchWallet={() => setWalletSelectorVisible(true)}
+          walletCount={allWallets.length}
         />
 
         <QuickActions
           onSend={() => router.push('/(app)/transfer/send' as never)}
           onReceive={() => router.push('/(app)/qr/show' as never)}
-          onTopUp={() => router.push('/(app)/transfer/topup' as never)}
+          onTopUp={() => router.push('/(app)/wallet/fund' as never)}
           onScan={() => router.push('/(app)/qr/scan' as never)}
         />
 
@@ -107,7 +111,7 @@ export default function HomeScreen() {
           onPress={() => router.push('/(app)/(tabs)/savings' as never)}
         />
 
-        <HealthScoreSection score={financialHealthScore} isLoading={isLoadingWallet} />
+        {/* <HealthScoreSection score={financialHealthScore} isLoading={isLoadingWallet} /> */}
 
         <TransactionList
           transactions={recentTransactions}
@@ -122,6 +126,8 @@ export default function HomeScreen() {
         onSelect={selectWallet}
         onClose={() => setWalletSelectorVisible(false)}
         visible={walletSelectorVisible}
+        onManage={() => router.push('/(app)/wallet' as never)}
+        onAddWallet={() => router.push('/(app)/wallet/create' as never)}
       />
     </>
   )

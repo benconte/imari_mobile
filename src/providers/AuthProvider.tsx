@@ -2,15 +2,33 @@
  * Imari AuthProvider.
  * Manages JWT auth state, hydrates from expo-secure-store on mount,
  * and injects the logout callback into the Axios interceptor.
+ *
+ * isPinSet — user-scoped flag for whether a wallet PIN has been set.
+ * The backend PIN model (WalletPin) is keyed by userId (one PIN per user).
+ * Backend does not yet return isPinSet in the login/profile responses,
+ * so we manage it separately in MMKV and expose setIsPinSet() to update it
+ * after a successful PIN setup or change.
+ * TODO: once backend adds isPinSet to GET /identity/profile, hydrate from there.
  */
 
 import React, { createContext, useCallback, useEffect, useRef, useState } from 'react'
-import { storage } from '../lib/storage'
 import { injectLogout } from '../lib/api'
 import { STORAGE_KEYS } from '../lib/constants'
-import type { User, AuthContextValue } from '../types/auth.types'
+import { storage } from '../lib/storage'
+import type { AuthContextValue, User } from '../types/auth.types'
 
 export const AuthContext = createContext<AuthContextValue | null>(null)
+
+// ─── Temporary constant ───────────────────────────────────────────────────────
+// Set this to `true` if you want to simulate a user who has already set a PIN.
+// Set to `false` to simulate a fresh user who hasn't set one yet.
+// This will be replaced once the backend returns isPinSet in the profile/login response.
+const IS_PIN_SET_DEFAULT = true
+
+// MMKV key for persisting isPinSet across app restarts
+const IS_PIN_SET_KEY = 'auth:isPinSet'
+
+// ─── Auth state ───────────────────────────────────────────────────────────────
 
 interface AuthState {
   user: User | null
@@ -26,14 +44,20 @@ const initialState: AuthState = {
   isLoading: true,
 }
 
+// ─── Provider ────────────────────────────────────────────────────────────────
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>(initialState)
+  const [isPinSet, setIsPinSetState] = useState<boolean>(IS_PIN_SET_DEFAULT)
   const isHydrated = useRef(false)
 
   const logout = useCallback(async (): Promise<void> => {
     await storage.delete(STORAGE_KEYS.ACCESS_TOKEN)
     await storage.delete(STORAGE_KEYS.REFRESH_TOKEN)
     await storage.delete(STORAGE_KEYS.USER)
+    // Reset isPinSet on logout so next user gets a clean state
+    storage.set(IS_PIN_SET_KEY, 'false')
+    setIsPinSetState(false)
     setState({ user: null, accessToken: null, isAuthenticated: false, isLoading: false })
   }, [])
 
@@ -49,9 +73,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const hydrate = async (): Promise<void> => {
       try {
-        const [token, userJson] = await Promise.all([
+        const [token, userJson, pinSetValue] = await Promise.all([
           storage.get(STORAGE_KEYS.ACCESS_TOKEN),
           storage.get(STORAGE_KEYS.USER),
+          storage.get(IS_PIN_SET_KEY),
         ])
 
         if (token && userJson) {
@@ -59,6 +84,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setState({ user, accessToken: token, isAuthenticated: true, isLoading: false })
         } else {
           setState((prev) => ({ ...prev, isLoading: false }))
+        }
+
+        // Restore isPinSet from storage (or keep the default constant)
+        if (pinSetValue !== null) {
+          setIsPinSetState(pinSetValue === 'true')
         }
       } catch {
         setState((prev) => ({ ...prev, isLoading: false }))
@@ -83,14 +113,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     storage.set(STORAGE_KEYS.USER, JSON.stringify(user))
   }, [])
 
+  /** Called after a successful POST /wallet/pin or PUT /wallet/pin. */
+  const setIsPinSet = useCallback((value: boolean): void => {
+    setIsPinSetState(value)
+    storage.set(IS_PIN_SET_KEY, value ? 'true' : 'false')
+  }, [])
+
   const value: AuthContextValue = {
     user: state.user,
     accessToken: state.accessToken,
     isAuthenticated: state.isAuthenticated,
     isLoading: state.isLoading,
+    isPinSet,
     login,
     logout,
     setUser,
+    setIsPinSet,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -27,6 +27,7 @@ type Key = (typeof KEYS)[number]
 interface PinInputProps {
   onComplete: (pin: string) => void
   onBiometric?: () => void
+  onClearError?: () => void
   error?: string | null
   loading?: boolean
   title?: string
@@ -36,6 +37,7 @@ interface PinInputProps {
 export function PinInput({
   onComplete,
   onBiometric,
+  onClearError,
   error,
   loading = false,
   title = 'Enter wallet PIN',
@@ -73,11 +75,13 @@ export function PinInput({
       }
 
       if (key === '⌫') {
+        if (error && onClearError) onClearError()
         setPin((prev) => prev.slice(0, -1))
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
         return
       }
 
+      if (error && onClearError) onClearError()
       const nextPin = pin + key
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
       setPin(nextPin)
@@ -86,7 +90,7 @@ export function PinInput({
         onComplete(nextPin)
       }
     },
-    [pin, loading, onComplete, onBiometric],
+    [pin, loading, onComplete, onBiometric, error, onClearError],
   )
 
   return (

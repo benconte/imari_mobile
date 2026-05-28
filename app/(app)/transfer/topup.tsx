@@ -1,18 +1,17 @@
 /**
- * Top-up screen — stub (full implementation in Session 4)
+ * Top-up redirect — navigates to the wallet fund screen.
+ * The full funding flow is implemented at /(app)/wallet/fund.
  */
-import { Screen } from '../../../src/components/layout/Screen'
-import { Text } from '../../../src/components/ui/Text'
-import { useTheme } from '../../../src/hooks/useTheme'
+import { useEffect } from 'react'
+import { useRouter } from 'expo-router'
 
-export default function TopUpScreen() {
-  const { COLORS, spacing } = useTheme()
-  return (
-    <Screen style={{ paddingHorizontal: spacing[4], paddingTop: spacing[4] }}>
-      <Text variant="h1" style={{ color: COLORS.text.primary }}>Top Up</Text>
-      <Text variant="body" style={{ color: COLORS.text.secondary, marginTop: spacing[2] }}>
-        Coming in Session 4
-      </Text>
-    </Screen>
-  )
+export default function TopUpRedirectScreen() {
+  const router = useRouter()
+
+  useEffect(() => {
+    // Redirect immediately to the wallet fund screen
+    router.replace('/(app)/wallet/fund' as never)
+  }, [router])
+
+  return null
 }

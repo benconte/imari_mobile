@@ -10,11 +10,15 @@ export interface Wallet {
   walletNumber: string
   currency: string
   balance: number
-  lockedBalance: number
+  availableBalance: number
+  lockedBalance?: number
   status: 'ACTIVE' | 'FROZEN' | 'CLOSED'
   isPrimary: boolean
+  isLocked?: boolean
+  dailyLimit?: number
+  monthlyLimit?: number
   createdAt: string
-  updatedAt: string
+  updatedAt?: string
 }
 
 export interface WalletDashboard {
@@ -25,3 +29,17 @@ export interface WalletDashboard {
   totalSaved: number
   activeVaultsCount: number
 }
+
+export interface CreateWalletPayload {
+  currency: string
+}
+
+export type WalletAction =
+  | 'FUND'
+  | 'SET_PRIMARY'
+  | 'SET_PIN'
+  | 'CHANGE_PIN'
+  | 'FREEZE'
+  | 'UNFREEZE'
+  | 'RENAME'
+  | 'CLOSE'

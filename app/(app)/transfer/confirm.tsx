@@ -156,6 +156,7 @@ export default function ConfirmScreen() {
             isLoading={transfer.isLoading}
             error={transfer.error}
             onComplete={handlePinComplete}
+            onClearError={transfer.clearError}
           />
         </Animated.View>
       </View>

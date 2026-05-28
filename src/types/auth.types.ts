@@ -26,6 +26,14 @@ export interface User {
   isMfaEnabled: boolean
   preferredCurrency: string
   financialHealthScore?: number | null
+  /**
+   * Whether the user has set a wallet PIN.
+   * This is USER-scoped (one PIN per user, not per wallet).
+   * Backend stores in walletPin table keyed by userId.
+   * TODO: backend team to return this in GET /identity/profile and login response.
+   * Until then: managed locally in AuthProvider via setIsPinSet().
+   */
+  isPinSet: boolean
 }
 
 export interface TokenPair {
@@ -74,7 +82,11 @@ export interface AuthContextValue {
   accessToken: string | null
   isAuthenticated: boolean
   isLoading: boolean
+  /** Whether the user has set a wallet PIN (user-scoped, not per-wallet). */
+  isPinSet: boolean
   login(accessToken: string, refreshToken: string, user: User): Promise<void>
   logout(): Promise<void>
   setUser(user: User): void
+  /** Call after PIN is successfully set or changed to update local state. */
+  setIsPinSet(value: boolean): void
 }

@@ -7,15 +7,31 @@ import type { Transaction, TransactionWithDetail } from '../../types/transaction
 
 export const mockWallet: Wallet = {
   id: 'wlt_001',
-  walletNumber: '4000 0000 0000 4821',
+  walletNumber: 'IMR-4000000001',
   currency: 'RWF',
   balance: 1250000,
+  availableBalance: 950000,
   lockedBalance: 300000,
   status: 'ACTIVE',
   isPrimary: true,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 }
+
+export const mockMultipleWallets: Wallet[] = [
+  mockWallet,
+  {
+    id: 'wlt_002',
+    walletNumber: 'IMR-4000000002',
+    currency: 'USD',
+    balance: 500,
+    availableBalance: 500,
+    status: 'ACTIVE',
+    isPrimary: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+]
 
 // ─── 20+ varied transactions spread across multiple days ─────────────────────
 
@@ -430,8 +446,8 @@ export const mockTransactionDetail: TransactionWithDetail = {
 // ─── Dashboard mock ───────────────────────────────────────────────────────────
 
 export const mockDashboard: WalletDashboard = {
-  primaryWallet: mockWallet,
-  allWallets: [mockWallet],
+  primaryWallet: { ...mockWallet },
+  allWallets: mockMultipleWallets,
   recentTransactions: mockTransactions.slice(0, 5),
   financialHealthScore: 74,
   totalSaved: 850000,

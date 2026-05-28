@@ -31,6 +31,7 @@ import { Button } from '../../src/components/ui/Button'
 import { KeyboardView } from '../../src/components/layout/KeyboardView'
 import type { User } from '../../src/types/auth.types'
 import type { UserProfile } from '../../src/types/profile.types'
+import { AxiosError } from 'axios'
 
 interface LoginErrors {
   email?: string
@@ -104,10 +105,8 @@ export default function LoginScreen() {
       await routeAfterLogin()
     } catch (err: unknown) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
-      const axiosMsg =
-        (err as { response?: { data?: { error?: { message?: string } } } })
-          ?.response?.data?.error?.message
-      Alert.alert('Login Failed', axiosMsg ?? 'Please check your credentials and try again.')
+      const axiosMsg = err instanceof AxiosError ? err?.response?.data?.message : "Please check your credentials and try again.";
+      Alert.alert('Login Failed', axiosMsg)
     } finally {
       setLoading(false)
     }

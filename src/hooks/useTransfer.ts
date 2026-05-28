@@ -34,6 +34,7 @@ export interface UseTransferReturn {
   error: string | null
   result: TransferResult | null
   reset: () => void
+  clearError: () => void
 
   resolveRecipient: (walletNumber: string) => void
   isResolving: boolean
@@ -109,12 +110,15 @@ export function useTransfer(): UseTransferReturn {
     mutation.reset()
   }, [mutation])
 
+  const clearError = useCallback(() => setError(null), [])
+
   return {
     initiate,
     isLoading: mutation.isPending,
     error,
     result,
     reset,
+    clearError,
     resolveRecipient,
     isResolving,
     resolvedRecipient,

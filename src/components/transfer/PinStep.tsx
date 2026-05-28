@@ -17,6 +17,7 @@ interface PinStepProps {
   error: string | null
   onComplete: (pin: string) => void
   onBiometric?: () => void
+  onClearError?: () => void
 }
 
 function formatDisplayAmount(amount: string, currency: string): string {
@@ -32,6 +33,7 @@ export function PinStep({
   error,
   onComplete,
   onBiometric,
+  onClearError,
 }: PinStepProps) {
   const { spacing } = useTheme()
 
@@ -49,6 +51,7 @@ export function PinStep({
         subtitle={`Sending ${formatDisplayAmount(amount, currency)} to ${recipientName}`}
         onComplete={onComplete}
         onBiometric={onBiometric}
+        onClearError={onClearError}
         error={error}
         loading={isLoading}
       />

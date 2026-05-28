@@ -4,7 +4,7 @@
  * Pan gesture on handle to dismiss.
  */
 
-import React, { useEffect, useCallback } from 'react'
+
 import {
   StyleSheet,
   View,
@@ -12,7 +12,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
+  Modal,
 } from 'react-native'
+import React, { useEffect, useCallback, useState } from 'react'
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -64,6 +66,8 @@ export function BottomSheet({
   const translateY = useSharedValue(sheetHeight)
   const backdropOpacity = useSharedValue(0)
 
+  const [modalVisible, setModalVisible] = useState(visible)
+
   const openSheet = useCallback(() => {
     backdropOpacity.value = withTiming(1, { duration: 200 })
     translateY.value = withSpring(0, { damping: 18, stiffness: 200 })
@@ -72,16 +76,20 @@ export function BottomSheet({
   const closeSheet = useCallback(() => {
     backdropOpacity.value = withTiming(0, { duration: 200 })
     translateY.value = withSpring(sheetHeight, { damping: 18, stiffness: 200 }, () => {
+      runOnJS(setModalVisible)(false)
       runOnJS(onClose)()
     })
   }, [backdropOpacity, translateY, sheetHeight, onClose])
 
   useEffect(() => {
     if (visible) {
+      setModalVisible(true)
       openSheet()
     } else {
       backdropOpacity.value = withTiming(0, { duration: 150 })
-      translateY.value = withTiming(sheetHeight, { duration: 200 })
+      translateY.value = withTiming(sheetHeight, { duration: 200 }, () => {
+        runOnJS(setModalVisible)(false)
+      })
     }
   }, [visible, openSheet, closeSheet, backdropOpacity, translateY, sheetHeight])
 
@@ -103,22 +111,23 @@ export function BottomSheet({
       }
     })
 
-  if (!visible) return null
+  if (!modalVisible && !visible) return null
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      <Backdrop opacity={backdropOpacity} onClose={closeSheet} />
+    <Modal visible={modalVisible} transparent animationType="none" statusBarTranslucent>
+      <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+        <Backdrop opacity={backdropOpacity} onClose={closeSheet} />
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         pointerEvents="box-none"
       >
         <Animated.View
-          style={[
-            styles.sheet,
-            { backgroundColor: COLORS.background.secondary, height: sheetHeight },
-            sheetStyle,
-          ]}
+            style={[
+              styles.sheet,
+              { backgroundColor: COLORS.background.primary, height: sheetHeight },
+              sheetStyle,
+            ]}
         >
           <GestureDetector gesture={panGesture}>
             <View style={styles.handleArea}>
@@ -133,7 +142,8 @@ export function BottomSheet({
           {children}
         </Animated.View>
       </KeyboardAvoidingView>
-    </View>
+      </View>
+    </Modal>
   )
 }
 
