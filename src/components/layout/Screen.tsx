@@ -12,6 +12,7 @@ import {
   StyleSheet,
   View,
   type ViewStyle,
+  type StyleProp,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useTheme } from '../../hooks/useTheme'
@@ -21,8 +22,8 @@ interface ScreenProps {
   scrollable?: boolean
   refreshing?: boolean
   onRefresh?: () => void
-  style?: ViewStyle
-  contentContainerStyle?: ViewStyle
+  style?: StyleProp<ViewStyle>
+  contentContainerStyle?: StyleProp<ViewStyle>
   edges?: ('top' | 'bottom' | 'left' | 'right')[]
 }
 

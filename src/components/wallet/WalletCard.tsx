@@ -72,7 +72,7 @@ export function WalletCard({ wallet, onPress, onMorePress, isSelected = false }:
             <Text style={styles.flag}>{flag}</Text>
             <View>
               <Text style={styles.currencyLabel}>{wallet.currency}</Text>
-              <Text style={styles.walletName}>{wallet.name || 'Main Wallet'}</Text>
+              <Text style={styles.walletName}>{wallet.isPrimary ? 'Main Wallet' : 'Secondary Wallet'}</Text>
             </View>
           </View>
           <View style={styles.topRight}>
