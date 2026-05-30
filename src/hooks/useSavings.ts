@@ -44,9 +44,6 @@ interface ApiResponse<T> {
 
 // Backend returns Decimal fields as strings — normalize to numbers
 function normalizeVault(v: Record<string, unknown>): SavingsVault {
-  console.log(v.targetAmount);
-  console.log(v.currentAmount);
-
   return {
     ...(v as unknown as SavingsVault),
     targetAmount: Number(v.targetAmount),
@@ -204,8 +201,6 @@ export function useVault(id: string) {
         }
       }
       // Backend expects amount as string, does not support note, requires currency
-      console.log("payload:", payload.currency);
-
       await api.post(`/savings/vaults/${id}/deposit`, {
         amount: String(payload.amount),
         currency: payload.currency || 'RWF',

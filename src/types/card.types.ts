@@ -1,5 +1,5 @@
 export type VirtualCardStatus = 'ACTIVE' | 'FROZEN' | 'EXPIRED' | 'CANCELLED'
-export type VirtualCardType = 'STANDARD' | 'VIRTUAL_ONLY'
+export type VirtualCardType = 'MULTI_USE' | 'SINGLE_USE' | 'SUBSCRIPTION' | 'STANDARD' | 'VIRTUAL_ONLY'
 
 export interface VirtualCard {
   id: string
@@ -26,6 +26,8 @@ export interface RevealedCard extends VirtualCard {
 
 export interface CreateCardPayload {
   walletId: string
+  type?: VirtualCardType
+  currency?: string
   spendingLimit?: number
   allowOnline?: boolean
   merchantLocks?: string[]

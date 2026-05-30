@@ -35,7 +35,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Hydrate override from storage on mount
   useEffect(() => {
     storage.get(STORAGE_KEYS.THEME_OVERRIDE).then((saved) => {
-      console.log(saved)
       if (saved === 'light' || saved === 'dark') {
         setOverrideScheme(saved)
       }
