@@ -1,16 +1,20 @@
 /**
  * TransactionFilter — BottomSheet filter panel for the transactions list.
  * All filter state is local — only committed to parent on "Apply".
+ * Date fields use @react-native-community/datetimepicker for a native picker UX.
  */
 
-import React, { useState } from 'react'
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import React, { useState, useEffect } from 'react'
+import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker'
+import { format } from 'date-fns'
 import { BottomSheet } from '../ui/BottomSheet'
 import { Button } from '../ui/Button'
 import { Chip } from '../ui/Chip'
 import { Text } from '../ui/Text'
 import { useTheme } from '../../hooks/useTheme'
 import { spacing } from '../../theme/spacing'
+import { radius } from '../../theme/radius'
 import type {
   TransactionFilters,
   TransactionType,
@@ -41,6 +45,133 @@ function FilterSection({ title, children }: FilterSectionProps) {
         {title}
       </Text>
       {children}
+    </View>
+  )
+}
+
+// ─── DatePickerField ─────────────────────────────────────────────────────────
+
+interface DatePickerFieldProps {
+  label: string
+  value: string | undefined      // 'YYYY-MM-DD' or undefined
+  onChange: (date: string | undefined) => void
+  minimumDate?: Date
+  maximumDate?: Date
+}
+
+function DatePickerField({ label, value, onChange, minimumDate, maximumDate }: DatePickerFieldProps) {
+  const { COLORS } = useTheme()
+  const [showPicker, setShowPicker] = useState(false)
+
+  const displayDate = value
+    ? format(new Date(value + 'T00:00:00'), 'MMM d, yyyy')
+    : 'Any date'
+
+  const pickerDate = value ? new Date(value + 'T00:00:00') : new Date()
+
+  function handleChange(event: DateTimePickerEvent, selectedDate?: Date) {
+    if (Platform.OS === 'android') {
+      setShowPicker(false)
+    }
+    if (event.type === 'set' && selectedDate) {
+      onChange(format(selectedDate, 'yyyy-MM-dd'))
+    } else if (event.type === 'dismissed') {
+      // User cancelled on Android
+    }
+  }
+
+  function handleIOSConfirm() {
+    setShowPicker(false)
+  }
+
+  function handleClear() {
+    onChange(undefined)
+    setShowPicker(false)
+  }
+
+  return (
+    <View style={styles.dateFieldWrap}>
+      <Text
+        variant="caption"
+        color={COLORS.text.secondary}
+        style={{ marginBottom: spacing[1] }}
+      >
+        {label}
+      </Text>
+
+      {/* Trigger button */}
+      <Pressable
+        onPress={() => setShowPicker(true)}
+        style={[
+          styles.dateTrigger,
+          {
+            borderColor: value ? COLORS.accent.primary : COLORS.border.default,
+            backgroundColor: value ? COLORS.accent.primaryMuted : COLORS.background.secondary,
+          },
+        ]}
+      >
+        <Text
+          variant="bodySmall"
+          style={{
+            color: value ? COLORS.accent.primary : COLORS.text.secondary,
+            fontFamily: value ? 'DMSans_500Medium' : 'DMSans_400Regular',
+          }}
+        >
+          📅 {displayDate}
+        </Text>
+        {value && (
+          <Pressable onPress={handleClear} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text variant="caption" style={{ color: COLORS.text.tertiary, marginLeft: spacing[2] }}>
+              ✕
+            </Text>
+          </Pressable>
+        )}
+      </Pressable>
+
+      {/* Android: render picker directly (shows as system dialog) */}
+      {showPicker && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={pickerDate}
+          mode="date"
+          display="default"
+          onChange={handleChange}
+          minimumDate={minimumDate}
+          maximumDate={maximumDate}
+        />
+      )}
+
+      {/* iOS: render inline within a styled container */}
+      {showPicker && Platform.OS === 'ios' && (
+        <View
+          style={[
+            styles.iosPickerWrap,
+            { backgroundColor: COLORS.background.secondary, borderColor: COLORS.border.subtle },
+          ]}
+        >
+          <DateTimePicker
+            value={pickerDate}
+            mode="date"
+            display="spinner"
+            onChange={handleChange}
+            minimumDate={minimumDate}
+            maximumDate={maximumDate}
+            style={{ flex: 1 }}
+            textColor={COLORS.text.primary}
+          />
+          <View style={styles.iosPickerActions}>
+            <Pressable onPress={handleClear} style={styles.iosPickerBtn}>
+              <Text variant="label" style={{ color: COLORS.text.secondary }}>
+                Clear
+              </Text>
+            </Pressable>
+            <Pressable onPress={handleIOSConfirm} style={styles.iosPickerBtn}>
+              <Text variant="label" style={{ color: COLORS.accent.primary }}>
+                Done
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
     </View>
   )
 }
@@ -96,6 +227,13 @@ export function TransactionFilter({
   const { COLORS } = useTheme()
   const [local, setLocal] = useState<TransactionFilters>(currentFilters)
 
+  // Sync local state when the sheet becomes visible
+  useEffect(() => {
+    if (visible) {
+      setLocal(currentFilters)
+    }
+  }, [visible])
+
   function toggle<T>(current: T | undefined, value: T): T | undefined {
     return current === value ? undefined : value
   }
@@ -111,11 +249,11 @@ export function TransactionFilter({
     onClose()
   }
 
-  // Reset local state when sheet opens
-  const handleOpen = () => setLocal(currentFilters)
+  // Parse from date for max constraint on "To" picker
+  const fromDateObj = local.dateFrom ? new Date(local.dateFrom + 'T00:00:00') : undefined
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} snapPoints={[580]}>
+    <BottomSheet visible={visible} onClose={onClose} snapPoints={[640]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
@@ -185,33 +323,22 @@ export function TransactionFilter({
           </View>
         </FilterSection>
 
-        {/* Date Range */}
+        {/* Date Range — native date pickers */}
         <FilterSection title="Date Range">
           <View style={styles.dateRow}>
-            <View style={styles.dateField}>
-              <Text variant="caption" color={COLORS.text.secondary} style={{ marginBottom: spacing[1] }}>
-                From (YYYY-MM-DD)
-              </Text>
-              <TextInput
-                value={local.dateFrom ?? ''}
-                onChangeText={(t) => setLocal((p) => ({ ...p, dateFrom: t || undefined }))}
-                placeholder="2024-01-01"
-                placeholderTextColor={COLORS.text.tertiary}
-                style={[styles.dateInput, { color: COLORS.text.primary, borderColor: COLORS.border.default }]}
-              />
-            </View>
-            <View style={styles.dateField}>
-              <Text variant="caption" color={COLORS.text.secondary} style={{ marginBottom: spacing[1] }}>
-                To (YYYY-MM-DD)
-              </Text>
-              <TextInput
-                value={local.dateTo ?? ''}
-                onChangeText={(t) => setLocal((p) => ({ ...p, dateTo: t || undefined }))}
-                placeholder="2024-12-31"
-                placeholderTextColor={COLORS.text.tertiary}
-                style={[styles.dateInput, { color: COLORS.text.primary, borderColor: COLORS.border.default }]}
-              />
-            </View>
+            <DatePickerField
+              label="From"
+              value={local.dateFrom}
+              onChange={(d) => setLocal((p) => ({ ...p, dateFrom: d }))}
+              maximumDate={local.dateTo ? new Date(local.dateTo + 'T00:00:00') : new Date()}
+            />
+            <DatePickerField
+              label="To"
+              value={local.dateTo}
+              onChange={(d) => setLocal((p) => ({ ...p, dateTo: d }))}
+              minimumDate={fromDateObj}
+              maximumDate={new Date()}
+            />
           </View>
         </FilterSection>
       </ScrollView>
@@ -249,16 +376,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing[3],
   },
-  dateField: {
+  dateFieldWrap: {
     flex: 1,
   },
-  dateInput: {
-    height: 40,
-    borderWidth: 1,
-    borderRadius: 8,
+  dateTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1.5,
+    borderRadius: radius.lg,
     paddingHorizontal: spacing[3],
-    fontSize: 13,
-    fontFamily: 'DMSans_400Regular',
+    paddingVertical: spacing[3],
+    minHeight: 44,
+  },
+  iosPickerWrap: {
+    marginTop: spacing[2],
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  iosPickerActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[2],
+  },
+  iosPickerBtn: {
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[3],
   },
   footer: {
     flexDirection: 'row',

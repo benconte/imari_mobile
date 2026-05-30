@@ -17,6 +17,7 @@ import { Screen } from '../../../src/components/layout/Screen'
 import { Text } from '../../../src/components/ui/Text'
 import { Button } from '../../../src/components/ui/Button'
 import { WalletListCard, WalletListCardSkeleton } from '../../../src/components/wallet/WalletListCard'
+import { ActionModal } from '../../../src/components/ui/ActionModal'
 import { WalletActions } from '../../../src/components/wallet/WalletActions'
 import { useWallet } from '../../../src/hooks/useWallet'
 import { useAuth } from '../../../src/hooks/useAuth'
@@ -58,6 +59,7 @@ export default function WalletIndexScreen() {
 
   const [actionsWallet, setActionsWallet] = useState<Wallet | null>(null)
   const [actionsVisible, setActionsVisible] = useState(false)
+  const [pinMenuVisible, setPinMenuVisible] = useState(false)
 
   function openActions(walletId: string) {
     const found = allWallets.find((w) => w.id === walletId)
@@ -71,15 +73,7 @@ export default function WalletIndexScreen() {
 
   function handlePinMenuPress() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    const pinAction = isPinSet ? 'Change PIN' : 'Set PIN'
-    const pinRoute = isPinSet
-      ? '/(app)/wallet/setup-pin?mode=change'
-      : '/(app)/wallet/setup-pin?mode=setup'
-
-    Alert.alert('PIN Management', 'Your PIN secures all wallet transactions.', [
-      { text: pinAction, onPress: () => router.push(pinRoute as never) },
-      { text: 'Cancel', style: 'cancel' },
-    ])
+    setPinMenuVisible(true)
   }
 
   // ─── Per-wallet action handler ────────────────────────────────────────────
@@ -100,6 +94,15 @@ export default function WalletIndexScreen() {
       default:
         break
     }
+  }
+
+  // ─── PIN route helper ────────────────────────────────────────────────────────
+
+  function navigateToPinSetup() {
+    const pinRoute = isPinSet
+      ? '/(app)/wallet/setup-pin?mode=change'
+      : '/(app)/wallet/setup-pin?mode=setup'
+    router.push(pinRoute as never)
   }
 
   // ─── Wallet count summary label ───────────────────────────────────────────
@@ -198,6 +201,24 @@ export default function WalletIndexScreen() {
         visible={actionsVisible}
         onClose={() => setActionsVisible(false)}
         onAction={handleAction}
+      />
+
+      {/* ── PIN management modal ── */}
+      <ActionModal
+        visible={pinMenuVisible}
+        onClose={() => setPinMenuVisible(false)}
+        title="PIN Management"
+        subtitle="Your PIN secures all wallet transactions."
+        options={[
+          {
+            label: isPinSet ? 'Change PIN' : 'Set PIN',
+            icon: '🔐',
+            description: isPinSet
+              ? 'Update your existing wallet PIN'
+              : 'Set a 4-digit PIN to secure your wallet',
+            onPress: navigateToPinSetup,
+          },
+        ]}
       />
     </Screen>
   )

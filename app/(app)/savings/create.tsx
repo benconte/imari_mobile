@@ -50,7 +50,75 @@ const CURATED_EMOJIS = [
   '🎁', '🌱', '🐾', '⚡', '🎨', '🏆', '🚀', '💎',
 ]
 
-const STEP_LABELS = ['Name', 'Target', 'Date', 'Lock']
+const STEP_LABELS = ['Name', 'Wallet', 'Target', 'Date', 'Lock']
+
+// ─── Step 1: Wallet ──────────────────────────────────────────────────────────
+function WalletStep({
+  selectedWalletId, allWallets, onSelect, onNext
+}: {
+  selectedWalletId: string
+  allWallets: any[]
+  onSelect: (id: string) => void
+  onNext: () => void
+}) {
+  const { COLORS } = useTheme()
+  return (
+    <View style={styles.step}>
+      <Text variant="h2" style={{ color: COLORS.text.primary, marginBottom: spacing[2] }}>
+        Select a wallet
+      </Text>
+      <Text variant="body" style={{ color: COLORS.text.secondary, marginBottom: spacing[5] }}>
+        Choose which wallet to link to this vault.
+      </Text>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {allWallets.map(w => {
+          const isSelected = selectedWalletId === w.id
+          return (
+            <TouchableOpacity
+              key={w.id}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onSelect(w.id) }}
+              style={[
+                {
+                  backgroundColor: COLORS.background.secondary,
+                  padding: spacing[4],
+                  borderRadius: radius.lg,
+                  marginBottom: spacing[3],
+                  borderWidth: 2,
+                  borderColor: isSelected ? COLORS.accent.primary : 'transparent',
+                }
+              ]}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                <Text variant="body" style={{ color: COLORS.text.primary, fontFamily: 'DMMono_500Medium' }}>
+                  {w.isPrimary ? 'Primary Wallet' : 'Wallet'}
+                </Text>
+                {isSelected && (
+                  <Text variant="body" style={{ color: COLORS.accent.primary }}>✓</Text>
+                )}
+              </View>
+              <Text variant="caption" style={{ color: COLORS.text.secondary, marginBottom: 8 }}>
+                {w.walletNumber}
+              </Text>
+              <Text variant="label" style={{ color: COLORS.text.primary }}>
+                Balance: {formatCurrency(w.balance, w.currency)}
+              </Text>
+            </TouchableOpacity>
+          )
+        })}
+        <Button
+          variant="primary"
+          fullWidth
+          onPress={onNext}
+          disabled={!selectedWalletId}
+          style={{ marginTop: spacing[6] }}
+        >
+          Continue
+        </Button>
+      </ScrollView>
+    </View>
+  )
+}
+
 
 const DATE_QUICK_OPTIONS = [
   { label: '3 months', days: 90 },
@@ -369,8 +437,19 @@ function LockStep({
 export default function CreateVaultScreen() {
   const router = useRouter()
   const { COLORS } = useTheme()
-  const { wallet } = useWallet()
+  const { wallet, allWallets } = useWallet()
   const { createVault, isCreating } = useSavings()
+
+  const [selectedWalletId, setSelectedWalletId] = React.useState('')
+
+  React.useEffect(() => {
+    if (!selectedWalletId && wallet?.id) {
+      setSelectedWalletId(wallet.id)
+    }
+  }, [wallet?.id, selectedWalletId])
+
+  const selectedWallet = allWallets.find(w => w.id === selectedWalletId) || wallet
+  const selectedCurrency = selectedWallet?.currency ?? 'RWF'
 
   const [step, setStep] = useState(0)
   const [emoji, setEmoji] = useState('💰')
@@ -410,14 +489,14 @@ export default function CreateVaultScreen() {
   }
 
   async function handleSubmit() {
-    if (!wallet) return
+    if (!selectedWallet) return
     try {
       const vault = await createVault({
-        walletId: wallet.id,
+        walletId: selectedWallet.id,
         name: name.trim(),
         description: description.trim() || undefined,
         targetAmount: parseFloat(amount) || 0,
-        currency: wallet.currency,
+        currency: selectedWallet.currency,
         isLocked: false,   // Note: backend create schema doesn't support isLocked yet
         targetDate: targetDate ?? undefined,
         iconEmoji: emoji,
@@ -451,7 +530,7 @@ export default function CreateVaultScreen() {
           [
             {
               flexDirection: 'row',
-              width: width * 4,
+              width: width * 5,
               height: '100%'
             },
             animatedStyle
@@ -465,22 +544,30 @@ export default function CreateVaultScreen() {
             />
           </View>
           <View style={{ width, height: '100%' }}>
+            <WalletStep
+              selectedWalletId={selectedWalletId}
+              allWallets={allWallets}
+              onSelect={setSelectedWalletId}
+              onNext={goNext}
+            />
+          </View>
+          <View style={{ width, height: '100%' }}>
             <TargetStep
-              amount={amount} currency={wallet?.currency ?? 'RWF'}
+              amount={amount} currency={selectedCurrency}
               onAmountChange={setAmount} onNext={goNext}
             />
           </View>
           <View style={{ width, height: '100%' }}>
             <DateStep
               targetDate={targetDate} onDateChange={setTargetDate}
-              targetAmount={parseFloat(amount) || 0} currency={wallet?.currency ?? 'RWF'}
+              targetAmount={parseFloat(amount) || 0} currency={selectedCurrency}
               onNext={goNext}
             />
           </View>
           <View style={{ width, height: '100%' }}>
             <LockStep
               name={name} emoji={emoji} targetAmount={parseFloat(amount) || 0}
-              targetDate={targetDate} currency={wallet?.currency ?? 'RWF'}
+              targetDate={targetDate} currency={selectedCurrency}
               isLocked={isLocked} lockUntil={lockUntil}
               onLockChange={setIsLocked} onLockUntilChange={setLockUntil}
               onSubmit={handleSubmit} isCreating={isCreating}

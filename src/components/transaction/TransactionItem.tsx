@@ -46,20 +46,9 @@ export function TransactionItem({ transaction, onPress }: TransactionItemProps) 
   const amountColor =
     transaction.direction === 'CREDIT' ? COLORS.status.success : COLORS.status.error
 
-  function handlePress() {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    if (onPress) {
-      onPress(transaction.id)
-    } else {
-      router.push(`/(app)/transaction/${transaction.id}` as never)
-    }
-  }
-
   return (
-    <TouchableOpacity
+    <View
       style={styles.row}
-      onPress={handlePress}
-      activeOpacity={0.7}
     >
       {/* Avatar */}
       <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
@@ -82,7 +71,7 @@ export function TransactionItem({ transaction, onPress }: TransactionItemProps) 
       <Text variant="mono" style={[styles.amount, { color: amountColor }]}>
         {formatTransactionAmount(transaction.amount, transaction.currency, transaction.direction)}
       </Text>
-    </TouchableOpacity>
+    </View>
   )
 }
 

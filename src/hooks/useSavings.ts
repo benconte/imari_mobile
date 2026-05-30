@@ -21,10 +21,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import type {
   SavingsVault,
-  VaultContribution,
-  SavingsRule,
   CreateVaultPayload,
+  VaultContribution,
   ContributePayload,
+  SavingsRule,
+  WithdrawPayload,
 } from '../types/savings.types'
 import {
   mockVaults,
@@ -43,6 +44,9 @@ interface ApiResponse<T> {
 
 // Backend returns Decimal fields as strings — normalize to numbers
 function normalizeVault(v: Record<string, unknown>): SavingsVault {
+  console.log(v.targetAmount);
+  console.log(v.currentAmount);
+
   return {
     ...(v as unknown as SavingsVault),
     targetAmount: Number(v.targetAmount),
@@ -199,9 +203,12 @@ export function useVault(id: string) {
           createdAt: new Date().toISOString(),
         }
       }
-      // Backend expects amount as string, does not support note
+      // Backend expects amount as string, does not support note, requires currency
+      console.log("payload:", payload.currency);
+
       await api.post(`/savings/vaults/${id}/deposit`, {
         amount: String(payload.amount),
+        currency: payload.currency || 'RWF',
       })
       // Return a synthetic contribution record
       return {
@@ -216,13 +223,16 @@ export function useVault(id: string) {
     onSuccess: invalidate,
   })
 
-  const withdrawMutation = useMutation<void, Error, number>({
-    mutationFn: async (amount) => {
+  const withdrawMutation = useMutation<void, Error, WithdrawPayload>({
+    mutationFn: async (payload) => {
       if (USE_MOCK) {
         await new Promise((r) => setTimeout(r, 800))
         return
       }
-      await api.post(`/savings/vaults/${id}/withdraw`, { amount: String(amount) })
+      await api.post(`/savings/vaults/${id}/withdraw`, {
+        amount: String(payload.amount),
+        currency: payload.currency || 'RWF',
+      })
     },
     onSuccess: invalidate,
   })

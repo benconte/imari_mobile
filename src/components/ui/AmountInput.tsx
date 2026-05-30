@@ -27,6 +27,7 @@ interface AmountInputProps {
   onCurrencyPress?: () => void
   maxAmount?: number
   label?: string
+  errorMessage?: string
 }
 
 export function AmountInput({
@@ -36,6 +37,7 @@ export function AmountInput({
   onCurrencyPress,
   maxAmount,
   label = 'Enter amount',
+  errorMessage = 'Exceeds available balance',
 }: AmountInputProps) {
   const { COLORS, spacing, radius, typography } = useTheme()
   const scale = useSharedValue(1)
@@ -136,7 +138,7 @@ export function AmountInput({
           variant="caption"
           style={{ color: COLORS.status.error, textAlign: 'center', marginTop: spacing[1] }}
         >
-          Exceeds available balance
+          {errorMessage}
         </Text>
       )}
 
