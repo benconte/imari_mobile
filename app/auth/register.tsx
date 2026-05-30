@@ -38,8 +38,6 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PHONE_RE = /^\+[1-9]\d{7,14}$/
 
 function validate(form: FormState): RegisterErrors {
-  console.log(form.phone);
-
   const errors: RegisterErrors = {}
   if (!form.firstName.trim()) errors.firstName = 'First name is required'
   if (!form.lastName.trim()) errors.lastName = 'Last name is required'
@@ -72,8 +70,6 @@ export default function RegisterScreen() {
     }
     setLoading(true)
     try {
-      console.log(form);
-
       await api.post('/auth/register', {
         firstName: form.firstName,
         lastName: form.lastName,

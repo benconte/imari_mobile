@@ -18,6 +18,7 @@ import type { SavingsVault } from '../../types/savings.types'
 
 interface VaultWithdrawSheetProps {
   vault: SavingsVault
+  availableBalance?: number
   visible: boolean
   onClose: () => void
   onSuccess: (amount: number) => void

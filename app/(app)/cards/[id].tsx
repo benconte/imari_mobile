@@ -178,7 +178,7 @@ export default function CardDetailScreen() {
             <View>
               <Text variant="body" color={COLORS.text.primary}>Merchant Locks</Text>
               <Text variant="caption" color={COLORS.text.secondary}>
-                {card.merchantLocks.length > 0 ? `${card.merchantLocks.length} categories restricted` : 'None active'}
+                {(card.merchantLocks?.length ?? 0) > 0 ? `${card.merchantLocks.length} categories restricted` : 'None active'}
               </Text>
             </View>
             <MaterialIcons name="chevron-right" size={24} color={COLORS.text.secondary} />
