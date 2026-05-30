@@ -1,10 +1,6 @@
 /**
- * VaultContributionSheet — quick contribute bottom sheet.
- * Shows current progress, AmountInput, optional note, and available balance.
- * Fires confetti when the contribution reaches 100% goal.
- *
- * Layout order: Title → Progress ring → Amount → Balance → Note → Error → CTA
- * Uses ScrollView to handle keyboard-induced layout shifts cleanly.
+ * VaultWithdrawSheet — bottom sheet for withdrawing money from a vault.
+ * Validates against locked vaults and available vault balance.
  */
 
 import React, { useState } from 'react'
@@ -20,35 +16,37 @@ import { spacing } from '../../theme/spacing'
 import { radius } from '../../theme/radius'
 import type { SavingsVault } from '../../types/savings.types'
 
-interface VaultContributionSheetProps {
+interface VaultWithdrawSheetProps {
   vault: SavingsVault
-  availableBalance: number
   visible: boolean
   onClose: () => void
   onSuccess: (amount: number) => void
-  isContributing: boolean
-  onContribute: (amount: number, note?: string) => Promise<void>
+  isWithdrawing: boolean
+  onWithdraw: (amount: number, note?: string) => Promise<void>
 }
 
-export function VaultContributionSheet({
+export function VaultWithdrawSheet({
   vault,
-  availableBalance,
   visible,
   onClose,
   onSuccess,
-  isContributing,
-  onContribute,
-}: VaultContributionSheetProps) {
+  isWithdrawing,
+  onWithdraw,
+}: VaultWithdrawSheetProps) {
   const { COLORS } = useTheme()
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const numericAmount = parseFloat(amount) || 0
-  const remaining = Math.max(vault.targetAmount - vault.currentAmount, 0)
-  const wouldComplete = numericAmount > 0 && (vault.currentAmount + numericAmount) >= vault.targetAmount
+  const remainingInVault = Math.max(vault.currentAmount - numericAmount, 0)
 
-  const isDisabled = numericAmount <= 0 || numericAmount > availableBalance || isContributing
+  // Disallow withdrawal if amount > currentAmount, or if locked
+  const isDisabled =
+    numericAmount <= 0 ||
+    numericAmount > 500 ||
+    vault.isLocked ||
+    isWithdrawing
 
   function handleClose() {
     setAmount('')
@@ -57,16 +55,16 @@ export function VaultContributionSheet({
     onClose()
   }
 
-  async function handleContribute() {
+  async function handleWithdraw() {
     if (isDisabled) return
     setError(null)
     try {
-      await onContribute(numericAmount, note.trim() || undefined)
+      await onWithdraw(numericAmount, note.trim() || undefined)
       setAmount('')
       setNote('')
       onSuccess(numericAmount)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Contribution failed. Please try again.'
+      const msg = err instanceof Error ? err.message : 'Withdrawal failed. Please try again.'
       setError(msg)
     }
   }
@@ -90,13 +88,13 @@ export function VaultContributionSheet({
           variant="h3"
           style={{ color: COLORS.text.primary, textAlign: 'center', marginBottom: spacing[4] }}
         >
-          Add Money to {vault.name}
+          Withdraw from {vault.name}
         </Text>
 
-        {/* Progress ring */}
+        {/* Progress ring - updated to reflect remaining amount */}
         <View style={styles.progressRow}>
           <VaultProgress
-            current={vault.currentAmount}
+            current={remainingInVault}
             target={vault.targetAmount}
             currency={vault.currency}
             size={96}
@@ -105,17 +103,17 @@ export function VaultContributionSheet({
           />
           <View style={styles.progressInfo}>
             <Text variant="label" style={{ color: COLORS.text.secondary }}>
-              Remaining
+              New Balance
             </Text>
             <Text
               variant="h3"
               style={{ color: COLORS.text.primary, fontFamily: 'DMMono_400Regular', marginTop: 4 }}
             >
-              {formatCurrency(remaining, vault.currency)}
+              {formatCurrency(remainingInVault, vault.currency)}
             </Text>
-            {wouldComplete && (
-              <Text variant="caption" style={{ color: COLORS.status.success, marginTop: 4 }}>
-                🎉 Goal complete!
+            {vault.isLocked && (
+              <Text variant="caption" style={{ color: COLORS.status.warning, marginTop: 4 }}>
+                ⚠️ Vault is locked until {vault.lockUntil ? new Date(vault.lockUntil).toLocaleDateString() : 'its deadline'}
               </Text>
             )}
           </View>
@@ -126,17 +124,17 @@ export function VaultContributionSheet({
           value={amount}
           onChange={setAmount}
           currency={vault.currency}
-          maxAmount={availableBalance}
-          label="Amount to add"
-          errorMessage="Exceeds what's available in the wallet"
+          maxAmount={vault.currentAmount}
+          label="Amount to withdraw"
+          errorMessage="Exceeds what's available in the vault"
         />
 
-        {/* Available balance */}
+        {/* Available balance in vault */}
         <Text
           variant="caption"
           style={{ color: COLORS.text.tertiary, textAlign: 'center', marginTop: spacing[1] }}
         >
-          Available: {formatCurrency(availableBalance, vault.currency)}
+          Available in vault: {formatCurrency(vault.currentAmount, vault.currency)}
         </Text>
 
         {/* Note input */}
@@ -170,13 +168,13 @@ export function VaultContributionSheet({
         {/* CTA */}
         <Button
           variant="primary"
-          onPress={handleContribute}
-          loading={isContributing}
+          onPress={handleWithdraw}
+          loading={isWithdrawing}
           disabled={isDisabled}
           fullWidth
           style={{ marginTop: spacing[3] }}
         >
-          {wouldComplete ? '🎉 Complete Goal!' : 'Contribute'}
+          Withdraw Money
         </Button>
       </ScrollView>
     </BottomSheet>

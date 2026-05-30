@@ -53,4 +53,11 @@ export interface CreateVaultPayload {
 export interface ContributePayload {
   amount: number
   note?: string
+  currency: string
+}
+
+export interface WithdrawPayload {
+  amount: number
+  note?: string
+  currency: string
 }

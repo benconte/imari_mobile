@@ -79,20 +79,34 @@ async function fetchRecentTransactions(): Promise<Transaction[]> {
   return response.data.data ?? []
 }
 
-// Build dashboard from /wallet/me + recent transactions
+// Fetch savings stats from /savings/vaults
+async function fetchSavingsStats(): Promise<{ totalSaved: number; activeVaultsCount: number }> {
+  try {
+    const response = await api.get<{ data: Array<{ currentAmount: string | number; status: string }> }>('/savings/vaults')
+    const vaults = response.data.data ?? []
+    const active = vaults.filter((v) => v.status !== 'CANCELLED')
+    const totalSaved = active.reduce((sum, v) => sum + Number(v.currentAmount), 0)
+    return { totalSaved, activeVaultsCount: active.length }
+  } catch {
+    return { totalSaved: 0, activeVaultsCount: 0 }
+  }
+}
+
+// Build dashboard from /wallet/me + recent transactions + savings
 async function fetchDashboard(): Promise<WalletDashboard> {
-  const [wallets, txns] = await Promise.all([
+  const [wallets, txns, savings] = await Promise.all([
     fetchWallets(),
     fetchRecentTransactions(),
+    fetchSavingsStats(),
   ])
   const primary = wallets.find((w) => w.isPrimary) ?? wallets[0]
   return {
     primaryWallet: primary ?? wallets[0],
     allWallets: wallets,
     recentTransactions: txns,
-    financialHealthScore: null,   // not yet from backend
-    totalSaved: 0,                // not yet from backend
-    activeVaultsCount: 0,         // not yet from backend
+    financialHealthScore: null,
+    totalSaved: savings.totalSaved,
+    activeVaultsCount: savings.activeVaultsCount,
   }
 }
 

@@ -19,8 +19,10 @@ import { Skeleton } from '../../../src/components/ui/Skeleton'
 import { EmptyState } from '../../../src/components/ui/EmptyState'
 import { Button } from '../../../src/components/ui/Button'
 import { Switch } from '../../../src/components/ui/Switch'
+import { ActionModal } from '../../../src/components/ui/ActionModal'
 import { VaultProgress } from '../../../src/components/savings/VaultProgress'
 import { VaultContributionSheet } from '../../../src/components/savings/VaultContributionSheet'
+import { VaultWithdrawSheet } from '../../../src/components/savings/VaultWithdrawSheet'
 import { formatCurrency } from '../../../src/lib/utils/currency'
 import { spacing } from '../../../src/theme/spacing'
 import { radius } from '../../../src/theme/radius'
@@ -61,40 +63,25 @@ export default function VaultDetailScreen() {
   const router = useRouter()
   const { COLORS } = useTheme()
   const { wallet } = useWallet()
-  const { vault, contributions, rules, isLoading, contribute, isContributing, refetch, closeVault } = useVault(id ?? '')
+  const { vault, contributions, rules, isLoading, contribute, isContributing, withdraw, isWithdrawing, refetch, closeVault } = useVault(id ?? '')
 
   const [sheetVisible, setSheetVisible] = useState(false)
+  const [withdrawSheetVisible, setWithdrawSheetVisible] = useState(false)
   const [confettiVisible, setConfettiVisible] = useState(false)
+  const [menuVisible, setMenuVisible] = useState(false)
+  const [confirmCloseVisible, setConfirmCloseVisible] = useState(false)
+  const [isClosing, setIsClosing] = useState(false)
 
   const availableBalance = wallet ? Number(wallet.availableBalance) : 0
 
-  function handleMenuPress() {
-    Alert.alert(vault?.name ?? 'Vault', 'Options', [
-      {
-        text: 'Withdraw',
-        onPress: () => Alert.alert('Withdraw', 'Withdrawal flow coming soon'),
-      },
-      {
-        text: 'Close Vault',
-        style: 'destructive',
-        onPress: () => {
-          Alert.alert('Close Vault?', 'This will cancel the vault. Any saved amount will return to your wallet.', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Close',
-              style: 'destructive',
-              onPress: async () => {
-                try {
-                  await closeVault()
-                  router.back()
-                } catch {}
-              },
-            },
-          ])
-        },
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ])
+  async function handleCloseVault() {
+    setIsClosing(true)
+    try {
+      await closeVault()
+      router.back()
+    } catch {
+      setIsClosing(false)
+    }
   }
 
   function handleContributionSuccess(amount: number) {
@@ -103,7 +90,17 @@ export default function VaultDetailScreen() {
       setConfettiVisible(true)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       setTimeout(() => setConfettiVisible(false), 3500)
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     }
+    Alert.alert('Success', `Successfully added ${formatCurrency(amount, vault?.currency || wallet?.currency || 'RWF')} to your vault.`)
+    refetch()
+  }
+
+  function handleWithdrawSuccess(amount: number) {
+    setWithdrawSheetVisible(false)
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    Alert.alert('Success', `Successfully withdrew ${formatCurrency(amount, vault?.currency || wallet?.currency || 'RWF')} from your vault.`)
     refetch()
   }
 
@@ -142,7 +139,13 @@ export default function VaultDetailScreen() {
         <Text variant="h3" style={{ color: COLORS.text.primary }} numberOfLines={1}>
           {vault.name}
         </Text>
-        <TouchableOpacity onPress={handleMenuPress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+            setMenuVisible(true)
+          }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <Text style={{ color: COLORS.text.primary, fontSize: 22 }}>⋮</Text>
         </TouchableOpacity>
       </View>
@@ -194,7 +197,7 @@ export default function VaultDetailScreen() {
                 <View key={rule.id}>
                   <Switch
                     value={rule.isActive}
-                    onChange={() => {}}  // PATCH /savings/rules/:id/toggle
+                    onChange={() => { }}  // PATCH /savings/rules/:id/toggle
                     label={ruleDescriptions[rule.type] ?? rule.type}
                   />
                   {idx < rules.length - 1 && (
@@ -264,7 +267,62 @@ export default function VaultDetailScreen() {
         onClose={() => setSheetVisible(false)}
         onSuccess={handleContributionSuccess}
         isContributing={isContributing}
-        onContribute={async (amount, note) => { await contribute({ amount, note }) }}
+        onContribute={async (amount, note) => { await contribute({ amount, note, currency: vault.currency || wallet?.currency || 'RWF' }) }}
+      />
+
+      {/* Withdraw Sheet */}
+      <VaultWithdrawSheet
+        vault={vault}
+        availableBalance={availableBalance}
+        visible={withdrawSheetVisible}
+        onClose={() => setWithdrawSheetVisible(false)}
+        onSuccess={handleWithdrawSuccess}
+        isWithdrawing={isWithdrawing}
+        onWithdraw={async (amount, note) => { await withdraw({ amount, note, currency: vault.currency || wallet?.currency || 'RWF' }) }}
+      />
+
+      {/* ⋮ Vault Options Modal */}
+      <ActionModal
+        visible={menuVisible}
+        onClose={() => setMenuVisible(false)}
+        title={vault.name}
+        subtitle="Vault options"
+        options={[
+          {
+            label: 'Withdraw',
+            icon: '💸',
+            description: 'Move funds back to your wallet',
+            onPress: () => {
+              setMenuVisible(false)
+              setTimeout(() => {
+                setWithdrawSheetVisible(true)
+              }, 400)
+            },
+          },
+          {
+            label: 'Close Vault',
+            icon: '🗑️',
+            description: 'Cancel vault and return savings to wallet',
+            destructive: true,
+            onPress: () => setConfirmCloseVisible(true),
+          },
+        ]}
+      />
+
+      {/* Close Vault Confirmation */}
+      <ActionModal
+        visible={confirmCloseVisible}
+        onClose={() => setConfirmCloseVisible(false)}
+        title="Close Vault?"
+        subtitle="Any saved amount will return to your wallet. This cannot be undone."
+        options={[
+          {
+            label: isClosing ? 'Closing…' : 'Yes, Close Vault',
+            icon: '⚠️',
+            destructive: true,
+            onPress: handleCloseVault,
+          },
+        ]}
       />
     </View>
   )

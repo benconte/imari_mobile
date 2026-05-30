@@ -19,15 +19,6 @@ import type { AuthContextValue, User } from '../types/auth.types'
 
 export const AuthContext = createContext<AuthContextValue | null>(null)
 
-// ─── Temporary constant ───────────────────────────────────────────────────────
-// Set this to `true` if you want to simulate a user who has already set a PIN.
-// Set to `false` to simulate a fresh user who hasn't set one yet.
-// This will be replaced once the backend returns isPinSet in the profile/login response.
-const IS_PIN_SET_DEFAULT = true
-
-// MMKV key for persisting isPinSet across app restarts
-const IS_PIN_SET_KEY = 'auth:isPinSet'
-
 // ─── Auth state ───────────────────────────────────────────────────────────────
 
 interface AuthState {
@@ -48,7 +39,7 @@ const initialState: AuthState = {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>(initialState)
-  const [isPinSet, setIsPinSetState] = useState<boolean>(IS_PIN_SET_DEFAULT)
+  const [isPinSet, setIsPinSetState] = useState<boolean>(false)
   const isHydrated = useRef(false)
 
   const logout = useCallback(async (): Promise<void> => {
@@ -56,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await storage.delete(STORAGE_KEYS.REFRESH_TOKEN)
     await storage.delete(STORAGE_KEYS.USER)
     // Reset isPinSet on logout so next user gets a clean state
-    storage.set(IS_PIN_SET_KEY, 'false')
+    await storage.set(STORAGE_KEYS.IS_PIN_SET_KEY, 'false')
     setIsPinSetState(false)
     setState({ user: null, accessToken: null, isAuthenticated: false, isLoading: false })
   }, [])
@@ -76,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const [token, userJson, pinSetValue] = await Promise.all([
           storage.get(STORAGE_KEYS.ACCESS_TOKEN),
           storage.get(STORAGE_KEYS.USER),
-          storage.get(IS_PIN_SET_KEY),
+          storage.get(STORAGE_KEYS.IS_PIN_SET_KEY),
         ])
 
         if (token && userJson) {
@@ -86,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setState((prev) => ({ ...prev, isLoading: false }))
         }
 
-        // Restore isPinSet from storage (or keep the default constant)
+        // Restore isPinSet from storage (synced from backend on login/profile)
         if (pinSetValue !== null) {
           setIsPinSetState(pinSetValue === 'true')
         }
@@ -103,6 +94,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await storage.set(STORAGE_KEYS.ACCESS_TOKEN, accessToken)
       await storage.set(STORAGE_KEYS.REFRESH_TOKEN, refreshToken)
       await storage.set(STORAGE_KEYS.USER, JSON.stringify(user))
+      // Sync isPinSet from the login response (backend returns this field)
+      const pinSetValue = user.isPinSet ?? false
+      setIsPinSetState(pinSetValue)
+      await storage.set(STORAGE_KEYS.IS_PIN_SET_KEY, pinSetValue ? 'true' : 'false')
       setState({ user, accessToken, isAuthenticated: true, isLoading: false })
     },
     [],
@@ -116,7 +111,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /** Called after a successful POST /wallet/pin or PUT /wallet/pin. */
   const setIsPinSet = useCallback((value: boolean): void => {
     setIsPinSetState(value)
-    storage.set(IS_PIN_SET_KEY, value ? 'true' : 'false')
+    // Fire-and-forget is fine here since this runs after PIN setup (not critical path)
+    storage.set(STORAGE_KEYS.IS_PIN_SET_KEY, value ? 'true' : 'false').catch(() => { })
   }, [])
 
   const value: AuthContextValue = {

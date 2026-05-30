@@ -101,6 +101,8 @@ export function BalanceCard({
 }: BalanceCardProps) {
   const { isPinSet } = useAuth()
   const [pinSheetVisible, setPinSheetVisible] = useState(false)
+  console.log("Pin set:", isPinSet);
+
 
   const translateY = useSharedValue(20)
   const mountOpacity = useSharedValue(0)

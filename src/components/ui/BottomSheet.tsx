@@ -40,6 +40,8 @@ interface BottomSheetProps {
   title?: string
   snapPoints?: number[]
   children: React.ReactNode
+  /** When true, sheet appears instantly without spring animation */
+  disableAnimation?: boolean
 }
 
 function Backdrop({ opacity, onClose }: { opacity: SharedValue<number>; onClose: () => void }) {
@@ -59,6 +61,7 @@ export function BottomSheet({
   title,
   snapPoints = [300],
   children,
+  disableAnimation = false,
 }: BottomSheetProps) {
   const { COLORS } = useTheme()
   const sheetHeight = snapPoints[0]
@@ -84,14 +87,19 @@ export function BottomSheet({
   useEffect(() => {
     if (visible) {
       setModalVisible(true)
-      openSheet()
+      if (disableAnimation) {
+        backdropOpacity.value = withTiming(1, { duration: 150 })
+        translateY.value = withTiming(0, { duration: 0 })
+      } else {
+        openSheet()
+      }
     } else {
       backdropOpacity.value = withTiming(0, { duration: 150 })
       translateY.value = withTiming(sheetHeight, { duration: 200 }, () => {
         runOnJS(setModalVisible)(false)
       })
     }
-  }, [visible, openSheet, closeSheet, backdropOpacity, translateY, sheetHeight])
+  }, [visible, openSheet, closeSheet, backdropOpacity, translateY, sheetHeight, disableAnimation])
 
   const sheetStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],

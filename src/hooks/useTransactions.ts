@@ -4,7 +4,7 @@
  * Mock mode:
  *   - Transactions API is not yet implemented on the backend.
  *   - USE_MOCK defaults to true. Set EXPO_PUBLIC_USE_MOCK=false ONLY when
- *     GET /transactions is live on the backend.
+ *     GET /wallet/transactions is live on the backend.
  */
 
 import { useState, useCallback } from 'react'
@@ -78,13 +78,20 @@ async function fetchTransactionsPage(
 ): Promise<TransactionPage> {
   const params = buildQueryParams(filters, page)
   const qs = new URLSearchParams(params).toString()
-  const { data } = await api.get<{ data: TransactionPage }>(`/transactions?${qs}`)
-  return data.data
+  const { data: responseBody } = await api.get<{ data: Transaction[] }>(`/wallet/transactions?${qs}`)
+  const items = responseBody.data || []
+  return {
+    data: items,
+    total: items.length,
+    page,
+    limit: PAGE_LIMIT,
+    hasNext: items.length === PAGE_LIMIT,
+  }
 }
 
 async function fetchTransactionById(id: string): Promise<TransactionWithDetail> {
-  const { data } = await api.get<{ data: TransactionWithDetail }>(`/transactions/${id}`)
-  return data.data
+  const { data: responseBody } = await api.get<{ data: TransactionWithDetail }>(`/wallet/transactions/${id}`)
+  return responseBody.data
 }
 
 // ─── Mock functions ───────────────────────────────────────────────────────────
@@ -166,14 +173,15 @@ export function useTransactions(initialFilters: TransactionFilters = {}): UseTra
   const setFilters = useCallback(
     (newFilters: TransactionFilters) => {
       setFiltersState(newFilters)
-      queryClient.resetQueries({ queryKey: ['transactions'] })
+      // Remove old cached pages so the new query key triggers a fresh fetch
+      queryClient.removeQueries({ queryKey: ['transactions'] })
     },
     [queryClient],
   )
 
   const clearFilters = useCallback(() => {
     setFiltersState({})
-    queryClient.resetQueries({ queryKey: ['transactions'] })
+    queryClient.removeQueries({ queryKey: ['transactions'] })
   }, [queryClient])
 
   return {
