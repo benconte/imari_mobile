@@ -160,15 +160,15 @@ export default function KYCSelfieScreen() {
           style={{ textAlign: 'center', marginTop: spacing[3], marginBottom: spacing[10] }}
         >
           We'll verify your identity within 1–2 business days.{'\n'}
-          You'll receive a notification when it's done.
+          Next, set up your wallet PIN.
         </Text>
         <Button
           fullWidth
           size="lg"
-          onPress={() => router.replace('/(app)/kyc-pending' as never)}
-          accessibilityLabel="Back to home"
+          onPress={() => router.replace('/(app)/kyc/set-pin' as never)}
+          accessibilityLabel="Set up PIN"
         >
-          Continue
+          Set Up PIN
         </Button>
       </Screen>
     )

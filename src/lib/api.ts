@@ -67,6 +67,12 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
 
+    // Do not intercept 401s for authentication endpoints
+    const url = originalRequest.url || ''
+    if (url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/refresh')) {
+      return Promise.reject(error)
+    }
+
     if (isRefreshing) {
       return new Promise<string>((resolve, reject) => {
         pendingQueue.push({ resolve, reject })

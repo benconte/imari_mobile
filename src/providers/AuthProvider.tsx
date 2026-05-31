@@ -9,6 +9,9 @@
  * so we manage it separately in MMKV and expose setIsPinSet() to update it
  * after a successful PIN setup or change.
  * TODO: once backend adds isPinSet to GET /identity/profile, hydrate from there.
+ *
+ * isLocallyVerified — in-memory flag. True after the user passes the lock
+ * screen (biometrics/PIN). False on every cold app start. Not persisted.
  */
 
 import React, { createContext, useCallback, useEffect, useRef, useState } from 'react'
@@ -40,15 +43,19 @@ const initialState: AuthState = {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>(initialState)
   const [isPinSet, setIsPinSetState] = useState<boolean>(false)
+  // In-memory only — resets on every cold start, triggering the lock screen
+  const [isLocallyVerified, setIsLocallyVerifiedState] = useState<boolean>(false)
   const isHydrated = useRef(false)
 
   const logout = useCallback(async (): Promise<void> => {
     await storage.delete(STORAGE_KEYS.ACCESS_TOKEN)
     await storage.delete(STORAGE_KEYS.REFRESH_TOKEN)
     await storage.delete(STORAGE_KEYS.USER)
+    await storage.delete(STORAGE_KEYS.BIOMETRICS_ENABLED)
     // Reset isPinSet on logout so next user gets a clean state
     await storage.set(STORAGE_KEYS.IS_PIN_SET_KEY, 'false')
     setIsPinSetState(false)
+    setIsLocallyVerifiedState(false)
     setState({ user: null, accessToken: null, isAuthenticated: false, isLoading: false })
   }, [])
 
@@ -73,6 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (token && userJson) {
           const user = JSON.parse(userJson) as User
           setState({ user, accessToken: token, isAuthenticated: true, isLoading: false })
+          // isLocallyVerified stays false — lock screen will prompt on next render
         } else {
           setState((prev) => ({ ...prev, isLoading: false }))
         }
@@ -98,6 +106,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const pinSetValue = user.isPinSet ?? false
       setIsPinSetState(pinSetValue)
       await storage.set(STORAGE_KEYS.IS_PIN_SET_KEY, pinSetValue ? 'true' : 'false')
+      // Fresh login counts as locally verified — user just authenticated with credentials/MFA
+      setIsLocallyVerifiedState(true)
       setState({ user, accessToken, isAuthenticated: true, isLoading: false })
     },
     [],
@@ -111,8 +121,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /** Called after a successful POST /wallet/pin or PUT /wallet/pin. */
   const setIsPinSet = useCallback((value: boolean): void => {
     setIsPinSetState(value)
-    // Fire-and-forget is fine here since this runs after PIN setup (not critical path)
     storage.set(STORAGE_KEYS.IS_PIN_SET_KEY, value ? 'true' : 'false').catch(() => { })
+  }, [])
+
+  /** Called from the lock screen after biometric/PIN verification succeeds. */
+  const setLocallyVerified = useCallback((value: boolean): void => {
+    setIsLocallyVerifiedState(value)
   }, [])
 
   const value: AuthContextValue = {
@@ -121,10 +135,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated: state.isAuthenticated,
     isLoading: state.isLoading,
     isPinSet,
+    isLocallyVerified,
     login,
     logout,
     setUser,
     setIsPinSet,
+    setLocallyVerified,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

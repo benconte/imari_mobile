@@ -13,6 +13,7 @@ const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK === 'true'
 interface UseWalletPinReturn {
   setupPin: (pin: string) => Promise<void>
   changePin: (oldPin: string, newPin: string) => Promise<void>
+  verifyPin: (pin: string) => Promise<boolean>
   isLoading: boolean
   error: string | null
   clearError: () => void
@@ -62,12 +63,38 @@ export function useWalletPin(): UseWalletPinReturn {
     },
   })
 
-  const isLoading = setupMutation.isPending || changeMutation.isPending
+  const verifyMutation = useMutation<boolean, Error, { pin: string }>({
+    mutationFn: async ({ pin }) => {
+      if (USE_MOCK) {
+        await new Promise((r) => setTimeout(r, 800))
+        return pin === '1234'
+      }
+      const { data } = await api.post<{ data: { valid: boolean } }>('/wallet/pin/verify', { pin })
+      return data.data.valid
+    },
+    onError: (err) => {
+      const msg =
+        (err as { response?: { data?: { error?: { message?: string } } } })
+          ?.response?.data?.error?.message ?? 'Failed to verify PIN.'
+      setError(msg)
+    },
+  })
+
+  const isLoading = setupMutation.isPending || changeMutation.isPending || verifyMutation.isPending
 
   return {
     setupPin: (pin: string) => setupMutation.mutateAsync({ pin }),
     changePin: (oldPin: string, newPin: string) =>
       changeMutation.mutateAsync({ oldPin, newPin }),
+    verifyPin: async (pin: string) => {
+      setError(null)
+      try {
+        const valid = await verifyMutation.mutateAsync({ pin })
+        return valid
+      } catch {
+        return false
+      }
+    },
     isLoading,
     error,
     clearError: () => setError(null),

@@ -1,12 +1,17 @@
 /**
  * Imari Login Screen.
- * Premium dark auth canvas. Email + password. Biometric shortcut.
+ * Premium dark auth canvas. Email + password + optional MFA TOTP.
  * Inline field validation. Calls POST /auth/login with device info.
  *
  * After login, fetches /identity/profile to check kycStatus and routes:
  *   VERIFIED    → /(app)/(tabs)/home
  *   IN_PROGRESS → /(app)/kyc-pending
  *   else        → /(app)/kyc (NOT_STARTED or REJECTED → resubmit)
+ *
+ * MFA: if the backend responds with a 401 containing "MFA required" (or similar),
+ * we show the TOTP input inline and re-submit. If the user has MFA enabled and
+ * doesn't provide a code, the backend will signal that. We prompt for the TOTP code
+ * on the second pass.
  */
 
 import React, { useState } from 'react'
@@ -16,7 +21,6 @@ import {
   StyleSheet,
   View,
 } from 'react-native'
-import * as LocalAuthentication from 'expo-local-authentication'
 import * as Haptics from 'expo-haptics'
 import { router, useLocalSearchParams } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -36,6 +40,7 @@ import { AxiosError } from 'axios'
 interface LoginErrors {
   email?: string
   password?: string
+  totp?: string
 }
 
 function validate(email: string, password: string): LoginErrors {
@@ -62,7 +67,6 @@ async function routeAfterLogin(): Promise<void> {
       router.replace('/(app)/kyc' as never)
     }
   } catch {
-    // Fallback: if profile fetch fails, go to KYC (safe default)
     router.replace('/(app)/kyc' as never)
   }
 }
@@ -74,6 +78,8 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [totpCode, setTotpCode] = useState('')
+  const [mfaRequired, setMfaRequired] = useState(false)
   const [errors, setErrors] = useState<LoginErrors>({})
   const [loading, setLoading] = useState(false)
 
@@ -81,6 +87,11 @@ export default function LoginScreen() {
     const errs = validate(email, password)
     if (Object.keys(errs).length) {
       setErrors(errs)
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+      return
+    }
+    if (mfaRequired && totpCode.length !== 6) {
+      setErrors((e) => ({ ...e, totp: 'Enter your 6-digit authenticator code' }))
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
       return
     }
@@ -96,17 +107,21 @@ export default function LoginScreen() {
         email: email.trim().toLowerCase(),
         password,
         device,
+        ...(mfaRequired && totpCode ? { totpCode } : {}),
       })
 
       await login(data.data.accessToken, data.data.refreshToken, data.data.user)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
 
-      // Route based on kycStatus
       await routeAfterLogin()
     } catch (err: unknown) {
+      console.log(err);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
-      const axiosMsg = err instanceof AxiosError ? err?.response?.data?.message : "Please check your credentials and try again.";
-      
+      const axiosErr = err instanceof AxiosError ? err : null
+      const axiosMsg = axiosErr?.response?.data?.message as string | undefined
+      console.log(axiosMsg);
+
+
       if (typeof axiosMsg === 'string' && axiosMsg.includes('verify your email address')) {
         router.push({
           pathname: '/auth/verify-otp',
@@ -115,26 +130,28 @@ export default function LoginScreen() {
         return
       }
 
-      Alert.alert('Login Failed', axiosMsg)
+      // Backend signals MFA is required (typically 401 with MFA-related message)
+      if (
+        typeof axiosMsg === 'string' &&
+        (axiosMsg.toLowerCase().includes('mfa') ||
+          axiosMsg.toLowerCase().includes('totp') ||
+          axiosMsg.toLowerCase().includes('two-factor') ||
+          axiosMsg.toLowerCase().includes('authenticator'))
+      ) {
+        setMfaRequired(true)
+        setErrors({ totp: 'Enter the code from your authenticator app' })
+        return
+      }
+
+      Alert.alert('Login Failed', axiosMsg ?? 'Please check your credentials and try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleBiometric = async () => {
-    const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Sign in to Imari',
-      fallbackLabel: 'Use password',
-    })
-    if (result.success) {
-      // TODO: biometric token flow — retrieve stored token from SecureStore
-      Alert.alert('Biometric OK', 'Biometric login will be wired in the Polish pass.')
-    }
-  }
-
   return (
     <KeyboardView>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <LinearGradient
         colors={[COLORS.background.primary, COLORS.background.secondary]}
         style={StyleSheet.absoluteFill}
@@ -184,6 +201,7 @@ export default function LoginScreen() {
             keyboardType="email-address"
             returnKeyType="next"
             autoComplete="email"
+            editable={!mfaRequired}
           />
           <Input
             label="Password"
@@ -191,19 +209,61 @@ export default function LoginScreen() {
             onChangeText={(t) => { setPassword(t); setErrors((e) => ({ ...e, password: undefined })) }}
             error={errors.password}
             secureTextEntry
-            returnKeyType="done"
+            returnKeyType={mfaRequired ? 'next' : 'done'}
             onSubmitEditing={handleLogin}
+            editable={!mfaRequired}
           />
 
-          <Pressable
-            onPress={() => router.push('/auth/forgot')}
-            accessibilityRole="link"
-            style={{ alignSelf: 'flex-end' }}
-          >
-            <Text variant="label" color={COLORS.accent.primary}>
-              Forgot password?
-            </Text>
-          </Pressable>
+          {/* MFA TOTP step — shown after credentials are accepted but MFA required */}
+          {mfaRequired && (
+            <View>
+              <View
+                style={[
+                  styles.mfaBanner,
+                  {
+                    backgroundColor: COLORS.accent.primaryMuted,
+                    borderColor: COLORS.accent.primary,
+                    borderRadius: 8,
+                    padding: spacing[3],
+                    marginBottom: spacing[2],
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <Text variant="bodySmall" color={COLORS.accent.primary}>
+                  🔐 Two-factor authentication is enabled on your account.
+                </Text>
+              </View>
+              <Input
+                label="Authenticator Code"
+                value={totpCode}
+                onChangeText={(t) => {
+                  const cleaned = t.replace(/\D/g, '').slice(0, 6)
+                  setTotpCode(cleaned)
+                  setErrors((e) => ({ ...e, totp: undefined }))
+                }}
+                error={errors.totp}
+                keyboardType="number-pad"
+                returnKeyType="done"
+                onSubmitEditing={handleLogin}
+                placeholder="6-digit code"
+                autoComplete="one-time-code"
+                autoFocus={mfaRequired}
+              />
+            </View>
+          )}
+
+          {!mfaRequired && (
+            <Pressable
+              onPress={() => router.push('/auth/forgot')}
+              accessibilityRole="link"
+              style={{ alignSelf: 'flex-end' }}
+            >
+              <Text variant="label" color={COLORS.accent.primary}>
+                Forgot password?
+              </Text>
+            </Pressable>
+          )}
         </View>
 
         {/* Actions */}
@@ -213,33 +273,40 @@ export default function LoginScreen() {
             size="lg"
             loading={loading}
             onPress={handleLogin}
-            accessibilityLabel="Sign in"
+            accessibilityLabel={mfaRequired ? 'Verify and sign in' : 'Sign in'}
           >
-            Sign in
+            {mfaRequired ? 'Verify & Sign In' : 'Sign In'}
           </Button>
 
-          <Button
-            fullWidth
-            size="md"
-            variant="ghost"
-            onPress={handleBiometric}
-            accessibilityLabel="Sign in with biometrics"
-          >
-            Sign in with biometrics
-          </Button>
+          {mfaRequired && (
+            <Button
+              fullWidth
+              variant="ghost"
+              onPress={() => {
+                setMfaRequired(false)
+                setTotpCode('')
+                setErrors({})
+              }}
+              accessibilityLabel="Back to credentials"
+            >
+              ← Back
+            </Button>
+          )}
         </View>
 
         {/* Register link */}
-        <View style={[styles.footer, { marginTop: spacing[8] }]}>
-          <Text variant="body" color={COLORS.text.secondary}>
-            Don't have an account?{' '}
-          </Text>
-          <Pressable onPress={() => router.push({ pathname: '/auth/register' })} accessibilityRole="link">
-            <Text variant="body" color={COLORS.accent.primary} style={{ fontFamily: 'DMSans_700Bold' }}>
-              Register
+        {!mfaRequired && (
+          <View style={[styles.footer, { marginTop: spacing[8] }]}>
+            <Text variant="body" color={COLORS.text.secondary}>
+              Don't have an account?{' '}
             </Text>
-          </Pressable>
-        </View>
+            <Pressable onPress={() => router.push({ pathname: '/auth/register' })} accessibilityRole="link">
+              <Text variant="body" color={COLORS.accent.primary} style={{ fontFamily: 'DMSans_700Bold' }}>
+                Register
+              </Text>
+            </Pressable>
+          </View>
+        )}
       </View>
     </KeyboardView>
   )
@@ -252,4 +319,5 @@ const styles = StyleSheet.create({
   actions: {},
   footer: { flexDirection: 'row', justifyContent: 'center' },
   verifiedBanner: {},
+  mfaBanner: {},
 })

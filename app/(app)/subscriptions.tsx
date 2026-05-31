@@ -12,7 +12,7 @@ export default function SubscriptionsScreen() {
     <Screen scrollable style={{ paddingHorizontal: spacing[6], paddingTop: spacing[4] }}>
       <Text variant="h1" color={COLORS.text.primary}>Subscriptions</Text>
       <Text variant="body" color={COLORS.text.secondary} style={{ marginTop: spacing[2] }}>
-        Subscription tracker — coming in Session 8
+        Subscription tracker
       </Text>
     </Screen>
   )

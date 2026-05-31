@@ -15,6 +15,8 @@ import { Input } from '../../src/components/ui/Input'
 import { Button } from '../../src/components/ui/Button'
 import { KeyboardView } from '../../src/components/layout/KeyboardView'
 import { AxiosError } from 'axios'
+import { StatusBar } from 'expo-status-bar'
+import { LinearGradient } from 'expo-linear-gradient'
 
 interface RegisterErrors {
   firstName?: string
@@ -98,6 +100,11 @@ export default function RegisterScreen() {
 
   return (
     <KeyboardView>
+      <StatusBar style="dark" />
+      <LinearGradient
+        colors={[COLORS.background.primary, COLORS.background.secondary]}
+        style={StyleSheet.absoluteFill}
+      />
       <ScrollView
         style={{ backgroundColor: COLORS.background.primary }}
         contentContainerStyle={[styles.content, { paddingHorizontal: spacing[6] }]}

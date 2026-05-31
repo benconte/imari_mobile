@@ -30,6 +30,7 @@ const DRAWER_ITEMS: DrawerRoute[] = [
   { label: 'Subscriptions', icon: '⟳', route: '/(app)/subscriptions' },
   { label: 'Notifications', icon: '◐', route: '/(app)/notifications' },
   { label: 'Profile', icon: '◉', route: '/(app)/profile' },
+  { label: 'Settings', icon: '⚙', route: '/(app)/settings' },
 ]
 
 export function DrawerContent({ state }: DrawerContentComponentProps) {
