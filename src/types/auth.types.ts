@@ -84,9 +84,16 @@ export interface AuthContextValue {
   isLoading: boolean
   /** Whether the user has set a wallet PIN (user-scoped, not per-wallet). */
   isPinSet: boolean
+  /**
+   * Whether the user has passed the local lock screen this session.
+   * Reset to false on app restart (in-memory only — not persisted).
+   */
+  isLocallyVerified: boolean
   login(accessToken: string, refreshToken: string, user: User): Promise<void>
   logout(): Promise<void>
   setUser(user: User): void
   /** Call after PIN is successfully set or changed to update local state. */
   setIsPinSet(value: boolean): void
+  /** Called from the lock screen after biometric/PIN verification succeeds. */
+  setLocallyVerified(value: boolean): void
 }

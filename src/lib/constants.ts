@@ -12,11 +12,21 @@ export const STORAGE_KEYS = {
   REFRESH_TOKEN: 'imari_refresh_token',
   USER: 'imari_user',
   THEME_OVERRIDE: 'imari_theme_override',
+  /** Whether fingerprint/face unlock is enabled for app lock screen */
   BIOMETRICS_ENABLED: 'imari_biometrics_enabled',
   DEVICE_ID: 'imari_device_id',
-  IS_PIN_SET_KEY: 'imari_is_pin_set'
+  IS_PIN_SET_KEY: 'imari_is_pin_set',
 } as const
 
 export const OTP_RESEND_TIMEOUT_SECONDS = 60
 export const API_TIMEOUT_MS = 10_000
 export const QUERY_STALE_TIME_MS = 2 * 60 * 1000
+
+// ── Deep link constants ────────────────────────────────────────────────────────
+export const DEEP_LINK_SCHEME = 'imari'
+export const DEEP_LINK_SCREENS = {
+  TRANSFER: 'transfer',
+  RECEIVE: 'receive',
+  TRANSACTION: 'transaction',
+  VAULT: 'vault',
+} as const

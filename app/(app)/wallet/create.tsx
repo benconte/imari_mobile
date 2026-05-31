@@ -17,6 +17,7 @@ import { useTheme } from '../../../src/hooks/useTheme'
 import { spacing } from '../../../src/theme/spacing'
 import { radius } from '../../../src/theme/radius'
 import type { Wallet } from '../../../src/types/wallet.types'
+import { AxiosError } from 'axios'
 
 // ─── Currency data ────────────────────────────────────────────────────────────
 
@@ -87,11 +88,11 @@ export default function CreateWalletScreen() {
     try {
       const created = await createWallet({ currency: selectedCurrency })
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-      // Navigate to PIN setup as an optional next step
-      router.replace(`/(app)/wallet/setup-pin?mode=setup&walletId=${created.id}&isOptional=true` as never)
+      router.replace(`/(app)/wallet`)
     } catch (err) {
-      const msg = (err as { response?: { data?: { error?: { message?: string } } } })
-        ?.response?.data?.error?.message ?? 'Failed to create wallet. Please try again.'
+      const msg = (err as AxiosError)
+        // @ts-ignore
+        ?.response?.data?.message ?? 'Failed to create wallet. Please try again.'
       Alert.alert('Error', msg)
     }
   }
@@ -187,8 +188,8 @@ export default function CreateWalletScreen() {
           <>
             <WalletCard
               wallet={previewWallet}
-              onPress={() => {}}
-              onMorePress={() => {}}
+              onPress={() => { }}
+              onMorePress={() => { }}
             />
 
             {/* Info card */}

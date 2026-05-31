@@ -4,8 +4,6 @@
  * Endpoints:
  *   GET  /identity/profile        → UserProfile
  *   PATCH /identity/profile       → updated fields
- *   GET  /identity/devices        → UserDevice[]
- *   DELETE /identity/devices/:id  → void
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -14,10 +12,9 @@ import { api } from '../lib/api'
 import { storage } from '../lib/storage'
 import { STORAGE_KEYS } from '../lib/constants'
 import { AuthContext } from '../providers/AuthProvider'
-import type { UserProfile, UserDevice, UpdateProfilePayload } from '../types/profile.types'
+import type { UserProfile, UpdateProfilePayload } from '../types/profile.types'
 
 const PROFILE_KEY = ['identity', 'profile']
-const DEVICES_KEY = ['identity', 'devices']
 
 export function useProfile() {
   const queryClient = useQueryClient()
@@ -52,30 +49,6 @@ export function useProfile() {
     },
   })
 
-  // ── Devices query ───────────────────────────────────────────────────────────
-  const devicesQuery = useQuery<UserDevice[]>({
-    queryKey: DEVICES_KEY,
-    queryFn: async () => {
-      const { data } = await api.get<{ data: UserDevice[] }>('/identity/devices')
-      const currentDeviceId = await storage.get(STORAGE_KEYS.DEVICE_ID)
-      return data.data.map((d) => ({
-        ...d,
-        isCurrent: d.deviceId === currentDeviceId,
-      }))
-    },
-    staleTime: 60_000,
-  })
-
-  // ── Revoke device ───────────────────────────────────────────────────────────
-  const revokeMutation = useMutation<void, Error, string>({
-    mutationFn: async (deviceId: string) => {
-      await api.delete(`/identity/devices/${deviceId}`)
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: DEVICES_KEY })
-    },
-  })
-
   return {
     profile: profileQuery.data,
     isLoading: profileQuery.isLoading,
@@ -84,11 +57,5 @@ export function useProfile() {
 
     updateProfile: updateMutation.mutateAsync,
     isUpdating: updateMutation.isPending,
-
-    devices: devicesQuery.data ?? [],
-    isLoadingDevices: devicesQuery.isLoading,
-
-    revokeDevice: revokeMutation.mutateAsync,
-    isRevoking: revokeMutation.isPending,
   }
 }

@@ -271,6 +271,19 @@ export default function ProfileScreen() {
           />
         </MenuSection>
 
+        <MenuSection title="Security">
+          <MenuItem
+            icon="⚙️"
+            label="Settings"
+            onPress={() => router.push('/(app)/settings' as never)}
+          />
+          <MenuItem
+            icon="📱"
+            label="Devices"
+            onPress={() => router.push('/(app)/settings/devices' as never)}
+          />
+        </MenuSection>
+
         <MenuSection title="Preferences">
           <MenuItem
             icon="💰"

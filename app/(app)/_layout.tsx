@@ -5,7 +5,8 @@
  * KYC Guard: on mount checks kycStatus from /identity/profile.
  *   - IN_PROGRESS → /kyc-pending (blocks app access until approved)
  *   - NOT_STARTED / REJECTED → /kyc (must complete KYC first)
- *   - VERIFIED → allowed through
+ *   - VERIFIED + no PIN → /kyc/set-pin (must set wallet PIN)
+ *   - VERIFIED + PIN set → allowed through
  *
  * IMPORTANT: react-native-gesture-handler must be imported at root _layout.tsx.
  */
@@ -22,7 +23,7 @@ import { api } from '../../src/lib/api'
 import type { UserProfile } from '../../src/types/profile.types'
 
 function useKycGuard() {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, isPinSet } = useAuth()
 
   useEffect(() => {
     if (isLoading || !isAuthenticated) return
@@ -36,15 +37,19 @@ function useKycGuard() {
         if (status === 'IN_PROGRESS') {
           router.replace('/(app)/kyc-pending' as never)
         } else if (status !== 'VERIFIED') {
+          // NOT_STARTED or REJECTED
           router.replace('/(app)/kyc' as never)
+        } else if (!isPinSet) {
+          // KYC verified but no wallet PIN set yet — must set PIN before entering app
+          router.replace('/(app)/kyc/set-pin' as never)
         }
       } catch {
-        // If profile fetch fails, let the user through — api.ts handles 401/logout
+        // If profile fetch fails, let user through — api.ts handles 401/logout
       }
     }
     check()
     return () => { cancelled = true }
-  }, [isAuthenticated, isLoading])
+  }, [isAuthenticated, isLoading, isPinSet])
 }
 
 export default function AppLayout() {
@@ -72,11 +77,16 @@ export default function AppLayout() {
         <Drawer.Screen name="budget" options={{ title: 'Budget' }} />
         <Drawer.Screen name="subscriptions" options={{ title: 'Subscriptions' }} />
         <Drawer.Screen name="notifications" options={{ title: 'Notifications' }} />
+        <Drawer.Screen name="notification-preferences" options={{ title: 'Notification Preferences' }} />
         <Drawer.Screen name="profile" options={{ title: 'Profile' }} />
         <Drawer.Screen name="edit-profile" options={{ title: 'Edit Profile' }} />
+        <Drawer.Screen name="settings" options={{ title: 'Settings' }} />
         <Drawer.Screen name="transfer" options={{ title: 'Transfer', swipeEnabled: false }} />
         <Drawer.Screen name="transaction" options={{ title: 'Transaction' }} />
         <Drawer.Screen name="qr" options={{ title: 'QR', swipeEnabled: false }} />
+        <Drawer.Screen name="savings" options={{ title: 'Savings' }} />
+        <Drawer.Screen name="wallet" options={{ title: 'Wallets' }} />
+        <Drawer.Screen name="cards" options={{ title: 'Cards' }} />
         <Drawer.Screen name="kyc" options={{ title: 'Verify Identity', swipeEnabled: false }} />
         <Drawer.Screen name="kyc-pending" options={{ title: 'KYC Pending', swipeEnabled: false }} />
       </Drawer>
