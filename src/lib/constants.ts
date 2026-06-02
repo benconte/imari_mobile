@@ -16,6 +16,7 @@ export const STORAGE_KEYS = {
   BIOMETRICS_ENABLED: 'imari_biometrics_enabled',
   DEVICE_ID: 'imari_device_id',
   IS_PIN_SET_KEY: 'imari_is_pin_set',
+  HAS_SEEN_ONBOARDING: 'imari_has_seen_onboarding',
 } as const
 
 export const OTP_RESEND_TIMEOUT_SECONDS = 60
