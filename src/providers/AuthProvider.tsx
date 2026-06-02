@@ -43,6 +43,7 @@ const initialState: AuthState = {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>(initialState)
   const [isPinSet, setIsPinSetState] = useState<boolean>(false)
+  const [hasSeenOnboarding, setHasSeenOnboardingState] = useState<boolean>(false)
   // In-memory only — resets on every cold start, triggering the lock screen
   const [isLocallyVerified, setIsLocallyVerifiedState] = useState<boolean>(false)
   const isHydrated = useRef(false)
@@ -71,10 +72,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const hydrate = async (): Promise<void> => {
       try {
-        const [token, userJson, pinSetValue] = await Promise.all([
+        const [token, userJson, pinSetValue, onboardingValue] = await Promise.all([
           storage.get(STORAGE_KEYS.ACCESS_TOKEN),
           storage.get(STORAGE_KEYS.USER),
           storage.get(STORAGE_KEYS.IS_PIN_SET_KEY),
+          storage.get(STORAGE_KEYS.HAS_SEEN_ONBOARDING),
         ])
 
         if (token && userJson) {
@@ -88,6 +90,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Restore isPinSet from storage (synced from backend on login/profile)
         if (pinSetValue !== null) {
           setIsPinSetState(pinSetValue === 'true')
+        }
+        if (onboardingValue !== null) {
+          setHasSeenOnboardingState(onboardingValue === 'true')
         }
       } catch {
         setState((prev) => ({ ...prev, isLoading: false }))
@@ -129,6 +134,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLocallyVerifiedState(value)
   }, [])
 
+  const setHasSeenOnboarding = useCallback((value: boolean): void => {
+    setHasSeenOnboardingState(value)
+    storage.set(STORAGE_KEYS.HAS_SEEN_ONBOARDING, value ? 'true' : 'false').catch(() => { })
+  }, [])
+
   const value: AuthContextValue = {
     user: state.user,
     accessToken: state.accessToken,
@@ -136,11 +146,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading: state.isLoading,
     isPinSet,
     isLocallyVerified,
+    hasSeenOnboarding,
     login,
     logout,
     setUser,
     setIsPinSet,
     setLocallyVerified,
+    setHasSeenOnboarding,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

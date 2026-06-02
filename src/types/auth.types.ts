@@ -96,4 +96,8 @@ export interface AuthContextValue {
   setIsPinSet(value: boolean): void
   /** Called from the lock screen after biometric/PIN verification succeeds. */
   setLocallyVerified(value: boolean): void
+  /** Whether the user has seen the onboarding screen. */
+  hasSeenOnboarding: boolean
+  /** Call to set the onboarding flag and persist it. */
+  setHasSeenOnboarding(value: boolean): void
 }

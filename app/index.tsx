@@ -12,9 +12,13 @@ import { Redirect } from 'expo-router'
 import { useAuth } from '../src/hooks/useAuth'
 
 export default function IndexPage() {
-  const { isAuthenticated, isLoading, isLocallyVerified } = useAuth()
+  const { isAuthenticated, isLoading, isLocallyVerified, hasSeenOnboarding } = useAuth()
 
   if (isLoading) return null
+
+  if (!hasSeenOnboarding) {
+    return <Redirect href={'/onboarding' as never} />
+  }
 
   if (!isAuthenticated) {
     return <Redirect href={'/auth/login' as never} />
