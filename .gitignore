@@ -52,3 +52,6 @@ claude
 !.env.sample
 
 .vscode/
+
+google-services.json
+imari-d7f1c-firebase-adminsdk-fbsvc-d11d16a859.json

@@ -1,3 +1,7 @@
+/**
+ * Mock notification data — kept for reference/testing.
+ * The app now uses real API data from the backend.
+ */
 import { Notification, NotificationPreference } from '../types/notification.types'
 
 const today = new Date()
@@ -14,6 +18,7 @@ export const mockNotifications: Notification[] = [
     title: 'New Device Login',
     body: 'We noticed a login from a new device (iPhone 14) in Kigali, Rwanda.',
     data: null,
+    actionUrl: null,
     isRead: false,
     sentAt: today.toISOString(),
     readAt: null,
@@ -26,6 +31,7 @@ export const mockNotifications: Notification[] = [
     title: 'Payment Sent',
     body: 'You successfully sent 25,000 RWF to John Doe.',
     data: { transactionId: 'tx-1' },
+    actionUrl: null,
     isRead: false,
     sentAt: today.toISOString(),
     readAt: null,
@@ -38,6 +44,7 @@ export const mockNotifications: Notification[] = [
     title: 'Goal Reached! 🎉',
     body: 'Congratulations! You reached your Emergency Fund goal of 1,000,000 RWF.',
     data: { vaultId: 'v-1' },
+    actionUrl: null,
     isRead: true,
     sentAt: yesterday.toISOString(),
     readAt: yesterday.toISOString(),
@@ -50,6 +57,7 @@ export const mockNotifications: Notification[] = [
     title: 'Budget Alert',
     body: "You've used 85% of your 'Food & Dining' budget for this month.",
     data: null,
+    actionUrl: null,
     isRead: true,
     sentAt: yesterday.toISOString(),
     readAt: yesterday.toISOString(),
@@ -62,6 +70,7 @@ export const mockNotifications: Notification[] = [
     title: 'Funds Received',
     body: 'You received 50,000 RWF from Jane Smith.',
     data: { transactionId: 'tx-2' },
+    actionUrl: null,
     isRead: false,
     sentAt: yesterday.toISOString(),
     readAt: null,
@@ -74,6 +83,7 @@ export const mockNotifications: Notification[] = [
     title: 'Bill Paid',
     body: 'Your electricity bill (EWSA) of 15,000 RWF has been paid.',
     data: { transactionId: 'tx-3' },
+    actionUrl: null,
     isRead: true,
     sentAt: threeDaysAgo.toISOString(),
     readAt: threeDaysAgo.toISOString(),
@@ -86,6 +96,7 @@ export const mockNotifications: Notification[] = [
     title: 'Invite Friends, Earn RWF!',
     body: 'Invite your friends to Imari and earn 5,000 RWF for each successful referral.',
     data: null,
+    actionUrl: null,
     isRead: true,
     sentAt: threeDaysAgo.toISOString(),
     readAt: threeDaysAgo.toISOString(),
@@ -98,6 +109,7 @@ export const mockNotifications: Notification[] = [
     title: 'Weekly Insight',
     body: 'You spent 20% less on transport this week compared to last week.',
     data: null,
+    actionUrl: null,
     isRead: true,
     sentAt: threeDaysAgo.toISOString(),
     readAt: threeDaysAgo.toISOString(),
@@ -110,6 +122,7 @@ export const mockNotifications: Notification[] = [
     title: 'Upcoming Subscription',
     body: 'Your Netflix subscription (4,500 RWF) will be charged tomorrow.',
     data: { subscriptionId: 'sub-1' },
+    actionUrl: null,
     isRead: true,
     sentAt: threeDaysAgo.toISOString(),
     readAt: threeDaysAgo.toISOString(),
@@ -122,16 +135,22 @@ export const mockNotifications: Notification[] = [
     title: 'Transfer Failed',
     body: 'Your transfer to MTN Mobile Money failed. The funds have been returned to your wallet.',
     data: { transactionId: 'tx-4' },
+    actionUrl: null,
     isRead: true,
     sentAt: threeDaysAgo.toISOString(),
     readAt: threeDaysAgo.toISOString(),
     createdAt: threeDaysAgo.toISOString(),
-  }
+  },
 ]
 
+// Updated to match backend NotificationPreference model (mutedTypes instead of types)
 export const mockPreferences: NotificationPreference = {
+  id: 'mock-pref-id',
+  userId: 'mock-user-id',
   channels: ['IN_APP', 'PUSH'],
-  types: ['TRANSACTION_ALERT', 'SECURITY_WARNING', 'SAVINGS_UPDATE', 'BUDGET_ALERT', 'PAYMENT_CONFIRMATION'],
+  mutedTypes: ['PROMOTIONAL'],   // inverted: types in here are disabled
   quietFrom: '22:00',
   quietTo: '07:00',
+  timezone: 'Africa/Kigali',
+  emailDigest: false,
 }

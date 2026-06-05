@@ -19,6 +19,7 @@ import { injectLogout } from '../lib/api'
 import { STORAGE_KEYS } from '../lib/constants'
 import { storage } from '../lib/storage'
 import type { AuthContextValue, User } from '../types/auth.types'
+import { collectDeviceInfo } from '../lib/device'
 
 export const AuthContext = createContext<AuthContextValue | null>(null)
 
@@ -78,6 +79,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           storage.get(STORAGE_KEYS.IS_PIN_SET_KEY),
           storage.get(STORAGE_KEYS.HAS_SEEN_ONBOARDING),
         ])
+
+
+        const device = await collectDeviceInfo()
+        console.log(device.pushToken);
+
 
         if (token && userJson) {
           const user = JSON.parse(userJson) as User

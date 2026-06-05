@@ -3,7 +3,7 @@
  *
  * The backend stores a UserDevice row on every login.
  * We send: deviceId (stable UUID), deviceName, deviceType, platform,
- *          osVersion, appVersion, fingerprint (basic), pushToken (future).
+ *          osVersion, appVersion, pushToken (Expo push token if permitted).
  *
  * deviceId is generated once and stored in SecureStore so the same
  * physical device always reports the same id across sessions.
@@ -11,9 +11,12 @@
 
 import * as Device from 'expo-device'
 import * as Application from 'expo-application'
+import * as Notifications from 'expo-notifications'
 import { Platform } from 'react-native'
 import { storage } from './storage'
 import { STORAGE_KEYS } from './constants'
+import Constants from 'expo-constants';
+import { push } from 'expo-router/build/global-state/routing'
 
 export interface DeviceInfo {
   deviceId: string
@@ -22,6 +25,7 @@ export interface DeviceInfo {
   platform: string
   osVersion?: string
   appVersion?: string
+  pushToken?: string
 }
 
 function getDeviceType(): 'IOS' | 'ANDROID' | 'WEB' {
@@ -49,7 +53,29 @@ async function getOrCreateDeviceId(): Promise<string> {
 }
 
 /**
- * Collect device info for the login payload.
+ * Try to get the Expo push token if permission is already granted.
+ * Does NOT request permission — that is done separately by registerPushNotifications()
+ * after the user is authenticated. This silently reads the token if it's available.
+ */
+export async function getExistingPushToken(): Promise<string | undefined> {
+  try {
+    if (!Device.isDevice) return undefined
+    const { status } = await Notifications.getPermissionsAsync()
+    if (status !== 'granted') return undefined
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ??
+      Constants.expoConfig?.extra?.projectId;
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId })
+    return tokenData.data
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Collect device info for the login payload, including the Expo push token
+ * if notification permission has already been granted on this device.
+ *
  * Call once per login attempt — the result is safe to include in the body.
  */
 export async function collectDeviceInfo(): Promise<DeviceInfo> {
@@ -64,6 +90,11 @@ export async function collectDeviceInfo(): Promise<DeviceInfo> {
   const appVersion =
     Application.nativeApplicationVersion ?? undefined
 
+  // Include push token if already permitted — no permission prompt here
+  const pushToken = await getExistingPushToken()
+  console.log("pushToken:", pushToken);
+
+
   return {
     deviceId,
     deviceName,
@@ -71,5 +102,6 @@ export async function collectDeviceInfo(): Promise<DeviceInfo> {
     platform: Platform.OS,
     osVersion,
     appVersion,
+    ...(pushToken ? { pushToken } : {}),
   }
 }

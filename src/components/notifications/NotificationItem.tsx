@@ -9,7 +9,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import * as Haptics from 'expo-haptics'
-import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons'
+import { MaterialIcons } from '@expo/vector-icons'
 import { Text } from '../ui/Text'
 import { useTheme } from '../../hooks/useTheme'
 import { Notification, NotificationType } from '../../types/notification.types'
@@ -31,6 +31,8 @@ const getIconConfig = (type: NotificationType) => {
     case 'PROMOTIONAL': return { icon: 'card-giftcard' as const, color: '#8B5CF6' }
     case 'FINANCIAL_INSIGHT': return { icon: 'lightbulb' as const, color: '#4F8EF7' }
     case 'SUBSCRIPTION_REMINDER': return { icon: 'event' as const, color: '#F0B429' }
+    case 'KYC_UPDATE': return { icon: 'verified-user' as const, color: '#10B981' }
+    case 'CARD_ALERT': return { icon: 'credit-card' as const, color: '#4F8EF7' }
     default: return { icon: 'notifications' as const, color: '#9CA3AF' }
   }
 }
